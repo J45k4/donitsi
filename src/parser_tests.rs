@@ -9,7 +9,7 @@ mod tests {
     fn parse_simple_typedef() {
         let code = r#"Main {
         }"#;
-
+ 
         let ast = parse_code(code);
 
         assert_eq!(ast.len(), 1);
@@ -84,76 +84,70 @@ mod tests {
                         Property {
                             name: "children".to_string(),
                             value: Box::new(
-                                Node::Array(
-                                    Array { 
-                                        items: vec![
-                                            Node::ObjectDef(
-                                                ObjectDef { 
-                                                    name: "Player".to_string(), 
-                                                    properties: vec![
-                                                        Property {
-                                                            name: "name".to_string(),
-                                                            value: Box::new(
-                                                                Node::LiteralString("Teppo".to_string())
-                                                            ),
-                                                        },
-                                                        Property {
-                                                            name: "age".to_string(),
-                                                            value: Box::new(
-                                                                Node::LiteralInt(24)
-                                                            ),
-                                                        },
-                                                        Property {
-                                                            name: "children".to_string(),
-                                                            value: Box::new(
-                                                                Node::Array(
-                                                                    Array { 
-                                                                        items: vec![
-                                                                            Node::ObjectDef(
-                                                                                ObjectDef { 
-                                                                                    name: "RigidBody".to_string(), 
-                                                                                    properties: vec![
-                                                                                        Property {
-                                                                                            name: "shape".to_string(),
-                                                                                            value: Box::new(
-                                                                                                Node::ObjectDef(
-                                                                                                    ObjectDef { 
-                                                                                                        name: "Box".to_string(), 
-                                                                                                        properties: vec![
-                                                                                                            Property {
-                                                                                                                name: "width".to_string(),
-                                                                                                                value: Box::new(
-                                                                                                                    Node::LiteralInt(100)
-                                                                                                                ),
-                                                                                                            },
-                                                                                                            Property {
-                                                                                                                name: "height".to_string(),
-                                                                                                                value: Box::new(
-                                                                                                                    Node::LiteralInt(100)
-                                                                                                                ),
-                                                                                                            },
-                                                                                                            Property {
-                                                                                                                name: "depth".to_string(),
-                                                                                                                value: Box::new(
-                                                                                                                    Node::LiteralInt(100)
-                                                                                                                ),
-                                                                                                            },
-                                                                                                        ]
-                                                                                                    }
-                                                                                                )
-                                                                                            ),
-                                                                                        },
-                                                                                    ]
-                                                                                }
-                                                                            )
+                                Node::ObjectDef(
+                                    ObjectDef { 
+                                        name: "Player".to_string(), 
+                                        properties: vec![
+                                            Property {
+                                                name: "name".to_string(),
+                                                value: Box::new(
+                                                    Node::LiteralString("Teppo".to_string())
+                                                ),
+                                            },
+                                            Property {
+                                                name: "age".to_string(),
+                                                value: Box::new(
+                                                    Node::LiteralInt(24)
+                                                ),
+                                            },
+                                            Property {
+                                                name: "children".to_string(),
+                                                value: Box::new(
+                                                    Node::Array(
+                                                        Array { 
+                                                            items: vec![
+                                                                Node::ObjectDef(
+                                                                    ObjectDef { 
+                                                                        name: "RigidBody".to_string(), 
+                                                                        properties: vec![
+                                                                            Property {
+                                                                                name: "shape".to_string(),
+                                                                                value: Box::new(
+                                                                                    Node::ObjectDef(
+                                                                                        ObjectDef { 
+                                                                                            name: "Box".to_string(), 
+                                                                                            properties: vec![
+                                                                                                Property {
+                                                                                                    name: "width".to_string(),
+                                                                                                    value: Box::new(
+                                                                                                        Node::LiteralInt(100)
+                                                                                                    ),
+                                                                                                },
+                                                                                                Property {
+                                                                                                    name: "height".to_string(),
+                                                                                                    value: Box::new(
+                                                                                                        Node::LiteralInt(100)
+                                                                                                    ),
+                                                                                                },
+                                                                                                Property {
+                                                                                                    name: "depth".to_string(),
+                                                                                                    value: Box::new(
+                                                                                                        Node::LiteralInt(100)
+                                                                                                    ),
+                                                                                                },
+                                                                                            ]
+                                                                                        }
+                                                                                    )
+                                                                                ),
+                                                                            },
                                                                         ]
                                                                     }
                                                                 )
-                                                            ),
-                                                        },
-                                                    ]
-                                                }
-                                            )
+                                                            ]
+                                                        }
+                                                    )
+                                                ),
+                                            },
                                         ]
                                     }
                                 )
@@ -162,28 +156,6 @@ mod tests {
                     ]
                 }
             )
-        ]);
-
-        assert_eq!(ast, vec![
-            Node::TypeDef("Main".to_string(), vec![
-                Node::Property("children".to_string(), Box::new(Node::Object("Player".to_string(), vec![
-                    Node::Property("name".to_string(), Box::new(Node::LiteralString("Teppo".to_string()))),
-                    Node::Property("age".to_string(), Box::new(Node::LiteralInt(24))),
-                    Node::Property("children".to_string(), Box::new(Node::Array(
-                        Array {
-                            items: vec![
-                                Node::Object("RigidBody".to_string(), vec![
-                                    Node::Property("shape".to_string(), Box::new(Node::Object("Box".to_string(), vec![
-                                        Node::Property("width".to_string(), Box::new(Node::LiteralInt(100))),
-                                        Node::Property("height".to_string(), Box::new(Node::LiteralInt(100))),
-                                        Node::Property("depth".to_string(), Box::new(Node::LiteralInt(100))),
-                                    ]))),
-                                ]),
-                            ]
-                        }
-                    ))),
-                ]))),
-            ]),
         ]);
     }
 
