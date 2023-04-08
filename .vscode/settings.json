@@ -1,5 +1,4 @@
 {
-    "rust-analyzer.linkedProjects": [
-        "\\Cargo.toml"
-    ]
+    "rust-analyzer.imports.granularity.group": "item",
+    "rust-analyzer.showUnlinkedFileNotification": false
 }
