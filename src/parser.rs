@@ -2,377 +2,487 @@ use logos::{Logos, skip};
 
 #[derive(Logos, Debug, PartialEq, Clone)]
 enum Token {
-    #[token(" ", skip)]
-    #[token("\t", skip)]
-    #[token("\n", skip)]
-    #[token("\r", skip)]
-    Whitespace,
-    #[token("for")]
-    For,
-    #[token("=>")]
-    Arrow,
-    #[token("{")]
-    OpenBrace,
-    #[token("}")]
-    CloseBrace,
-    #[token("(")]
-    OpenParen,
-    #[token(")")]
-    CloseParen,
-    #[token("[")]
-    OpenBracket,
-    #[token("]")]
-    CloseBracket,
-    #[token(": ")]
-    Colon,
-    #[token("=")]
-    Equal,
-    #[regex(r#""[^"]*""#, |t| t.slice()[1..t.slice().len()-1].to_string())]
-    String(String),
-    #[regex(r"-?[0-9]+", |t| t.slice().parse::<i64>())]
-    Int(i64),
-    #[regex(r"-?[0-9]*\.[0-9]+", |t| t.slice().parse::<f64>())]
-    Decimal(f64),
-    #[regex(r"[A-Za-z]+", |t| t.slice().to_string())]
-    Identifier(String),
-    #[error]
-    Error,
+	#[token(" ", skip)]
+	#[token("\t", skip)]
+	#[token("\n", skip)]
+	#[token("\r", skip)]
+	Whitespace,
+	#[token("for")]
+	For,
+	#[token("=>")]
+	Arrow,
+	#[token("{")]
+	OpenBrace,
+	#[token("}")]
+	CloseBrace,
+	#[token("(")]
+	OpenParen,
+	#[token(")")]
+	CloseParen,
+	#[token("[")]
+	OpenBracket,
+	#[token("]")]
+	CloseBracket,
+	#[token(": ")]
+	Colon,
+	#[token("=")]
+	Equal,
+	#[regex(r#""[^"]*""#, |t| t.slice()[1..t.slice().len()-1].to_string())]
+	String(String),
+	#[regex(r"-?[0-9]+", |t| t.slice().parse::<i64>())]
+	Int(i64),
+	#[regex(r"-?[0-9]*\.[0-9]+", |t| t.slice().parse::<f64>())]
+	Decimal(f64),
+	#[token("struct")]
+	Struct,
+	#[token("Int")]
+	IntDef,
+	#[token("Float")]
+	FloatDef,
+	#[token("String")]
+	StringDef,
+	#[regex(r"[A-Za-z_]+", |t| t.slice().to_string())]
+	Identifier(String),
+	#[error]
+	Error,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Lambda {
-    pub params: Vec<Node>,
-    pub body: Vec<Node>,
+	pub params: Vec<Node>,
+	pub body: Vec<Node>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Assignment {
-    pub left: Box<Node>,
-    pub right: Box<Node>,
+	pub left: Box<Node>,
+	pub right: Box<Node>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Property {
-    pub name: String,
-    pub value: Box<Node>,
+	pub name: String,
+	pub value: Box<Node>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ObjectDef {
-    pub name: String,
-    pub properties: Vec<Property>,
+	pub name: String,
+	pub properties: Vec<Property>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ForLoop {
-    pub iterator: Box<Node>,
-    pub body: Box<Node>,
+	pub iterator: Box<Node>,
+	pub body: Box<Node>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Array {
-    pub items: Vec<Node>,
+	pub items: Vec<Node>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Call {
-    pub callee: Box<Node>,
-    pub arguments: Vec<Node>,
+	pub callee: Box<Node>,
+	pub arguments: Vec<Node>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum VarType {
+	Int,
+	Float,
+	String,
+	Var(String),
+	StrLit(String),
+	FnDef(FnDef),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct StructField {
+	pub name: String,
+	pub typ: VarType
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct StructDef {
+	pub name: String,
+	pub fields: Vec<StructField>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct FnDef {
+	pub params: Vec<Node>,
+	pub body: Vec<Node>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Node {
-    Ident(String),
-    Lambda(Lambda),
-    Assignment(Assignment),
-    ObjectDef(ObjectDef),
-    ForLoop(ForLoop),
-    Array(Array),
-    Call(Call),
-    VarDef(String, Box<Node>),
-    TypeDef(String, Vec<Node>),
-    Property(String, Box<Node>),
-    Object(String, Vec<Node>),
-    LiteralString(String),
-    LiteralInt(i64),
-    LiteralDecimal(f64),
-    LiteralPercent(f64),
-    FunctionDef(String, Vec<Node>),
+	Ident(String),
+	Lambda(Lambda),
+	Assignment(Assignment),
+	ObjectDef(ObjectDef),
+	ForLoop(ForLoop),
+	Array(Array),
+	Call(Call),
+	VarDef(String, Box<Node>),
+	TypeDef(String, Vec<Node>),
+	Property(String, Box<Node>),
+	Object(String, Vec<Node>),
+	LiteralString(String),
+	LiteralInt(i64),
+	LiteralDecimal(f64),
+	LiteralPercent(f64),
+	FnDef(FnDef),
+	StructDef(StructDef),
 }
-
-// fn parse_function_definition(tokens: &mut Vec<Token>) -> Node {
-//     let name = expect_identifier(tokens);
-//     expect_token(tokens, Token::Equal);
-//     expect_token(tokens, Token::OpenParen);
-//     expect_token(tokens, Token::CloseParen);
-//     expect_token(tokens, Token::Arrow);
-//     let body = parse_value(tokens);
-//     Node::FunctionDef(name, vec![body])
-// }
-
-// fn parse_for_loop(tokens: &mut Vec<Token>) -> Node {
-//     expect_token(tokens, Token::OpenBrace);
-//     let body = parse_properties(tokens);
-//     expect_token(tokens, Token::CloseBrace);
-//     Node::ForLoop(Box::new(Node::Object(String::new(), Vec::new())), Box::new(Node::Array(body)))
-// }
-
-// fn parse_type_definitions(tokens: &mut Vec<Token>) -> Vec<Node> {
-//     let mut nodes = Vec::new();
-//     while !tokens.is_empty() {
-//         nodes.push(parse_type_definition(tokens));
-//     }
-//     nodes
-// }
-
-// fn parse_type_definition(tokens: &mut Vec<Token>) -> Node {
-//     let name = expect_identifier(tokens);
-//     expect_token(tokens, Token::OpenBrace);
-//     let properties = parse_properties(tokens);
-//     expect_token(tokens, Token::CloseBrace);
-//     Node::TypeDef(name, properties)
-// }
-
-// fn parse_properties(tokens: &mut Vec<Token>) -> Vec<Node> {
-//     let mut nodes = Vec::new();
-//     while tokens.last() != Some(&Token::CloseBrace) {
-//         nodes.push(parse_property(tokens));
-//     }
-//     nodes
-// }
-
-// fn parse_property(tokens: &mut Vec<Token>) -> Node {
-//     let name = expect_identifier(tokens);
-//     expect_token(tokens, Token::Colon);
-//     let value = parse_value(tokens);
-//     Node::Property(name, Box::new(value))
-// }
-
-
-// fn parse_value(tokens: &mut Vec<Token>) -> Node {
-//     match tokens.pop() {
-//         Some(Token::Identifier(ident)) if tokens.last() == Some(&Token::OpenParen) => {
-//             tokens.push(Token::Identifier(ident));
-//             parse_function_definition(tokens)
-//         },
-//         Some(Token::For) => parse_for_loop(tokens),
-//         Some(Token::Identifier(ident)) => {
-//             if tokens.last() == Some(&Token::OpenBrace) {
-//                 tokens.pop();
-//                 let properties = parse_properties(tokens);
-//                 expect_token(tokens, Token::CloseBrace);
-//                 Node::Object(ident, properties)
-//             } else {
-//                 Node::Object(ident, Vec::new())
-//             }
-//         }
-//         Some(Token::OpenBracket) => {
-//             let mut items = Vec::new();
-//             while tokens.last() != Some(&Token::CloseBracket) {
-//                 items.push(parse_value(tokens));
-//             }
-//             expect_token(tokens, Token::CloseBracket);
-//             Node::Array(items)
-//         }
-//         Some(Token::String(str)) => {
-//             Node::LiteralString(str)
-//         }
-//         Some(Token::Int(i)) => {
-//             Node::LiteralInt(i)
-//         }
-//         _ => panic!("Unexpected token while parsing value"),
-//     }
-// }
 
 fn expect_token(tokens: &mut Vec<Token>, expected: Token) {
-    let token = tokens.pop();
-    assert_eq!(token, Some(expected.clone()), "Expected {:?}, got {:?}", expected, token);
+	let token = tokens.pop();
+	assert_eq!(token, Some(expected.clone()), "Expected {:?}, got {:?}", expected, token);
 }
-
-// fn expect_identifier(tokens: &mut Vec<Token>) -> String {
-//     let token = tokens.pop();
-//     if let Some(Token::Identifier(ident)) = token {
-//         ident
-//     } else {
-//         panic!("Expected identifier, got {:?}", token);
-//     }
-// }
 
 fn parse_object_def_properties(tokens: &mut Vec<Token>) -> Vec<Property> {
-    expect_token(tokens, Token::OpenBrace);
+	println!("parse_object_def_properties");
 
-    let mut properties = Vec::new();
+	let mut properties = Vec::new();
 
-    while let Some(token) = tokens.pop() {
-        match token {
-            Token::CloseBrace => {
-                break;
-            },
-            Token::Identifier(ident) => {
-                expect_token(tokens, Token::Colon);
-                let value = parse_node(tokens);
-                let prop = Property { 
-                    name: ident,
-                    value: Box::new(value) 
-                };
-                properties.push(prop);
-            },
-            _ => {
-                panic!("Unexpected token while parsing object definition properties: {:?}", token)
-            }
-        }
-    }
+	while let Some(token) = tokens.pop() {
+		println!("object token {:?}", token);
 
-    properties
+		match token {
+			Token::CloseBrace => {
+				break;
+			},
+			Token::Identifier(ident) => {
+				println!("object property ident: {}", ident);
+
+				expect_token(tokens, Token::Colon);
+				let value = parse_node(tokens).unwrap();
+				let prop = Property { 
+					name: ident,
+					value: Box::new(value) 
+				};
+				properties.push(prop);
+			},
+			_ => {
+				panic!("Unexpected token while parsing object definition properties: {:?}", token)
+			}
+		}
+	}
+
+	properties
 }
 
-// fn parse_str_literal(tokens: &mut Vec<Token>) -> Node {
-//     expect_token(tokens, Token::DoubleQuote);
+fn parse_list(tokens: &mut Vec<Token>) -> Vec<Node> {
+	println!("parse_list");
 
-//     let token = tokens.pop().unwrap();
+	let mut list = Vec::new();
 
-//     let node = match token {
-//         Token::String(str) => {
-//             Node::LiteralString(str)
-//         },
-//         _ => panic!("Unexpected token while parsing string literal: {:?}", token)
-//     };
+	while let Some(token) = tokens.pop() {
+		println!("list token {:?}", token);
 
-//     expect_token(tokens, Token::DoubleQuote);
+		match token {
+			Token::CloseBracket => {
+				break;
+			},
+			_ => {
+				let node = parse_node(tokens).unwrap();
+				list.push(node);
+			}
+		}
+	}
 
-//     return node;
-// }
-
-fn parse_factor(mut tokens: &mut Vec<Token>) {
-    let token = tokens.pop().unwrap();
-
-    match token {
-        Token::Identifier(ident) => {
-
-        },
-        Token::Int(i) => {
-
-        },
-        Token::String(str) => {
-
-        },
-        _ => {}
-    }
+	list
 }
 
-fn parse_term(mut tokens: &mut Vec<Token>) {
-    let left = parse_factor(tokens);
+fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Node {
+	println!("Identifier: {:?}", ident);
+
+	let next_token = tokens.pop().unwrap();
+
+	match next_token {
+		Token::OpenBrace => {
+			let props: Vec<Property> = parse_object_def_properties(&mut tokens);
+		
+			Node::ObjectDef(
+				ObjectDef {
+					name: ident.to_string(),
+					properties: props,
+				}
+			)
+		},
+		Token::Equal => {
+			tokens.pop();
+
+			let left = Node::Ident(ident.to_string());
+			let right = parse_node(&mut tokens).unwrap();
+
+			let node = Node::Assignment(
+				Assignment {
+					left: Box::new(left),
+					right: Box::new(right),
+				}
+			);
+
+			node
+		},
+		Token::OpenParen => {
+			let mut call = Call {
+				callee: Box::new(Node::Ident(ident.to_string())),
+				arguments: Vec::new(),
+			};
+
+			while let Some(next) = tokens.pop() {
+				match next {
+					Token::CloseParen => {
+						break;
+					},
+					Token::String(str) => {
+						println!("String: {}", str);
+						call.arguments.push(Node::LiteralString(str));
+					},
+					_ => {
+						todo!();
+					}
+				}
+			};
+
+			Node::Call(call)
+		},
+		// Token::OpenBracket => {
+		// 	parse_list(tokens)
+		// },
+		_ => {
+			panic!("Unexpected token: {:?}", next_token);
+		}
+	}
 }
 
-fn parse_expression(mut tokens: &mut Vec<Token>) {
-    let left = parse_term(tokens);
+fn parse_func_def(tokens: &mut Vec<Token>) -> FnDef {
+	println!("parse_func_def");
+
+	let mut fn_def = FnDef {
+		params: Vec::new(),
+		body: Vec::new(),
+	};
+
+	while let Some(token) = tokens.pop() {
+		println!("token: {:?}", token);
+
+		match token {
+			Token::CloseParen => {
+				break;
+			},
+			_ => {
+				todo!();
+			}
+		};
+	};
+
+	expect_token(tokens, Token::Arrow);
+
+	let next = tokens.pop().unwrap();
+
+	println!("next: {:?}", next);
+
+	let mut braced = false;
+	while let Some(next) = tokens.last() {
+		match next {
+			Token::OpenBrace => {
+				tokens.pop();
+				braced = true;
+			},
+			Token::CloseBrace => {
+				tokens.pop();
+				break;
+			},
+			_ => {
+				let n = match parse_node(tokens) {
+					Some(n) => n,
+					None => break,
+				};
+
+				fn_def.body.push(n);
+
+				if braced {
+					break;
+				}
+			}
+		};
+	};
+
+	println!("parsing fn def finished");
+
+	fn_def
+	
+	// match next {
+	// 	Token::Arrow => {
+	// 		let next = tokens.pop().unwrap();
+
+	// 		match next {
+	// 			Token::OpenBrace => {
+	// 				//let props: Vec<Property> = parse_object_def_properties(&mut tokens);
+
+	// 				let mut fdef = FunctionDef {
+	// 					params: Vec::new(),
+	// 					body: Vec::new(),
+	// 				};
+
+	// 				while let Some(token) = tokens.pop() {
+	// 					let node = match token {
+	// 						Token::Identifier(ident) => {
+	// 							parse_identifier(tokens, &ident)
+	// 						},
+	// 						Token::CloseBrace => {
+	// 							break;
+	// 						},
+	// 						_ => {
+	// 							todo!("Unexpected token: {:?}", token);
+	// 						}
+	// 					};
+
+	// 					fdef.body.push(node);
+	// 				}
+
+	// 				Node::FunctionDef(fdef)
+	// 			},
+	// 			_ => {
+	// 				todo!();
+	// 			}
+	// 		}
+	// 	},
+	// 	_ => {
+	// 		todo!();
+	// 	}
+	// }
 }
 
-fn parse_node(mut tokens: &mut Vec<Token>) -> Node {
-    let next_token = tokens.last().unwrap().clone();
+fn parse_node(tokens: &mut Vec<Token>) -> Option<Node> {
+	println!("parse_node");
 
-    match next_token {
-            Token::Identifier(ident) => {
-                tokens.pop();
+	match tokens.pop().unwrap() {
+		Token::Identifier(ident) => {
+			Some(parse_identifier(tokens, &ident))
+		},
+		Token::String(str) => {
+			println!("LiteralString: {:?}", str);
+			Some(Node::LiteralString(str))
+		},
+		Token::Int(i) => {
+			Some(Node::LiteralInt(i))
+		},
+		Token::CloseBrace => {
+			None
+		},
+		Token::OpenBracket => {
+			println!("OpenBracket");
 
-                let next_token = match tokens.last() {
-                    Some(token) => token,
-                    None => panic!("Unexpected end of file"),
-                };
+			let mut items = Vec::new();
 
-                match next_token {
-                    Token::OpenBrace => {
-                        let props = parse_object_def_properties(&mut tokens);
+			while let Some(token) = tokens.last() {
+				match token {
+					Token::CloseBracket => {
+						println!("CloseBracket");
 
-                    
-                            Node::ObjectDef(
-                                ObjectDef {
-                                    name: ident.clone(),
-                                    properties: props,
-                                }
-                            )
-                    },
-                    Token::Equal => {
-                    tokens.pop();
+						tokens.pop();
+						break;
+					},
+					_ => {
+						let node = parse_node(tokens).unwrap();
+						items.push(node);
+					}
+				}
+			}
 
-                    let left = Node::Ident(ident.clone());
-                    let right = parse_node(&mut tokens);
+			let array = Array {
+				items: items,
+			};
 
-                    let node = Node::Assignment(
-                        Assignment {
-                            left: Box::new(left),
-                            right: Box::new(right),
-                        }
-                    );
+			Some(Node::Array(array))
+		},
+		Token::OpenParen => {
+			Some(Node::FnDef(parse_func_def(tokens)))
+		},
+		Token::Struct => {
+			println!("Struct");
 
-                    node
-                },
-                _ => {
-                        panic!("Unexpected token: {:?}", next_token);
-                }
-            }
-        },
-        Token::String(str) => {
-            tokens.pop();
-            Node::LiteralString(str)
-        },
-        Token::Int(i) => {
-            tokens.pop();
-            Node::LiteralInt(i)
-        },
-        Token::OpenBracket => {
-            tokens.pop();
+			let token = tokens.pop().unwrap();
 
-            let mut items = Vec::new();
+			let name = match token {
+				Token::Identifier(ident) => {
+					ident
+				},
+				_ => {
+					todo!();
+				}
+			};
 
-            while let Some(token) = tokens.last() {
-                match token {
-                    Token::CloseBracket => {
-                        tokens.pop();
-                        break;
-                    },
-                    _ => {
-                        let node = parse_node(&mut tokens);
-                        items.push(node);
-                    }
-                }
-            }
+			expect_token(tokens, Token::OpenBrace);
 
-            let array = Array {
-                items: items,
-            };
+			let mut struct_def = StructDef {
+				name: name,
+				fields: Vec::new(),
+			};
 
-            Node::Array(array)
-        },
-        Token::OpenParen => {
-            tokens.pop();
+			while let Some(token) = tokens.pop() {
+				match token {
+					Token::CloseBrace => {
+						break;
+					},
+					Token::Identifier(ident) => {
+						println!("Identifier: {}", ident);
 
-            let next_token = tokens.last().unwrap().clone();
+						expect_token(tokens, Token::Colon);
 
-            match next_token {
-                _ => {
-                    todo!();
-                }
-            }
-        }
-            _ => {
-            panic!("Unexpected token: {:?}", next_token);
-            }
-        }
+						let typ = match tokens.pop().unwrap() {
+							Token::IntDef => VarType::Int,
+							Token::FloatDef => VarType::Float,
+							Token::StringDef => VarType::String,
+							Token::Identifier(ident) => VarType::Var(ident),
+							Token::String(str) => VarType::StrLit(str),
+							Token::OpenParen => VarType::FnDef(parse_func_def(tokens)),
+							_ => {
+								todo!();
+							}
+						};
+
+						let field = StructField {
+							name: ident,
+							typ: typ,
+						};
+
+						struct_def.fields.push(field);
+					},
+					_ => {
+						todo!();
+					}
+				}
+			}
+
+			Some(Node::StructDef(struct_def))
+		},
+		_ => {
+			todo!();
+		}
+	}
 }
 
 pub fn parse_code(input: &str) -> Vec<Node> {
-    let lexer = Token::lexer(input);
-    let mut tokens: Vec<Token> = lexer.collect();
-    tokens.reverse();
+	let lexer = Token::lexer(input);
+	let mut tokens: Vec<Token> = lexer.collect();
+	tokens.reverse();
 
-    let mut ast = Vec::new();
+	let mut ast = Vec::new();
 
-    while let Some(token) = tokens.last() {
-        let node = parse_node(&mut tokens);
+	while let Some(_) = tokens.last() {
+		let node = match parse_node(&mut tokens) {
+			Some(n) => n,
+			None => break,
+		};
 
-        ast.push(node);
-    }
+		ast.push(node);
+	}
 
-    ast
+	ast
 }

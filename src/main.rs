@@ -8,6 +8,10 @@ mod parser_tests;
 mod args;
 mod commands;
 mod window;
+mod component;
+mod donitsi;
+mod components;
+mod ui_tests;
 
 fn main() {
     env_logger::builder()

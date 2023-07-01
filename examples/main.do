@@ -1,4 +1,5 @@
 
+
 Player {
     name: String
     currentAnimation: String
