@@ -14,7 +14,7 @@ mod tests {
 
         assert_eq!(ast.len(), 1);
         assert_eq!(ast, vec![
-            Node::ObjectDef(
+            ASTNode::ObjectDef(
                 ObjectDef { 
                     name: "Main".to_string(), 
                     properties: vec![]
@@ -34,20 +34,20 @@ mod tests {
 
         assert_eq!(ast.len(), 1);
         assert_eq!(ast, vec![
-            Node::ObjectDef(
+            ASTNode::ObjectDef(
                 ObjectDef { 
                     name: "Main".to_string(), 
                     properties: vec![
                         Property {
                             name: "name".to_string(),
                             value: Box::new(
-                                Node::LiteralString("Teppo".to_string())
+                                ASTNode::LiteralString("Teppo".to_string())
                             ),
                         },
                         Property {
                             name: "age".to_string(),
                             value: Box::new(
-                                Node::LiteralInt(24)
+                                ASTNode::LiteralInt(24)
                             ),
                         },
                     ]
@@ -77,62 +77,62 @@ mod tests {
         let ast = parse_code(code);
 
         assert_eq!(ast, vec![
-            Node::ObjectDef(
+            ASTNode::ObjectDef(
                 ObjectDef { 
                     name: "Main".to_string(), 
                     properties: vec![
                         Property {
                             name: "children".to_string(),
                             value: Box::new(
-                                Node::ObjectDef(
+                                ASTNode::ObjectDef(
                                     ObjectDef { 
                                         name: "Player".to_string(), 
                                         properties: vec![
                                             Property {
                                                 name: "name".to_string(),
                                                 value: Box::new(
-                                                    Node::LiteralString("Teppo".to_string())
+                                                    ASTNode::LiteralString("Teppo".to_string())
                                                 ),
                                             },
                                             Property {
                                                 name: "age".to_string(),
                                                 value: Box::new(
-                                                    Node::LiteralInt(24)
+                                                    ASTNode::LiteralInt(24)
                                                 ),
                                             },
                                             Property {
                                                 name: "children".to_string(),
                                                 value: Box::new(
-                                                    Node::Array(
+                                                    ASTNode::Array(
                                                         Array { 
                                                             items: vec![
-                                                                Node::ObjectDef(
+                                                                ASTNode::ObjectDef(
                                                                     ObjectDef { 
                                                                         name: "RigidBody".to_string(), 
                                                                         properties: vec![
                                                                             Property {
                                                                                 name: "shape".to_string(),
                                                                                 value: Box::new(
-                                                                                    Node::ObjectDef(
+                                                                                    ASTNode::ObjectDef(
                                                                                         ObjectDef { 
                                                                                             name: "Box".to_string(), 
                                                                                             properties: vec![
                                                                                                 Property {
                                                                                                     name: "width".to_string(),
                                                                                                     value: Box::new(
-                                                                                                        Node::LiteralInt(100)
+                                                                                                        ASTNode::LiteralInt(100)
                                                                                                     ),
                                                                                                 },
                                                                                                 Property {
                                                                                                     name: "height".to_string(),
                                                                                                     value: Box::new(
-                                                                                                        Node::LiteralInt(100)
+                                                                                                        ASTNode::LiteralInt(100)
                                                                                                     ),
                                                                                                 },
                                                                                                 Property {
                                                                                                     name: "depth".to_string(),
                                                                                                     value: Box::new(
-                                                                                                        Node::LiteralInt(100)
+                                                                                                        ASTNode::LiteralInt(100)
                                                                                                     ),
                                                                                                 },
                                                                                             ]
@@ -166,23 +166,23 @@ mod tests {
         let ast = parse_code(code);
 
         assert_eq!(ast, vec![
-            Node::Assignment(
+            ASTNode::Assignment(
                 Assignment {
                     left: Box::new(
-                        Node::Ident("foo".to_string())
+                        ASTNode::Ident("foo".to_string())
                     ),
                     right: Box::new(
-                        Node::Lambda(
+                        ASTNode::Lambda(
                             Lambda { 
                                 params: vec![], 
                                 body: vec![
-                                    Node::Call(
+                                    ASTNode::Call(
                                         Call { 
                                             callee: Box::new(
-                                                Node::Ident("info".to_string())
+                                                ASTNode::Ident("info".to_string())
                                             ), 
                                             arguments: vec![
-                                                Node::LiteralString("hello".to_string())
+                                                ASTNode::LiteralString("hello".to_string())
                                             ] 
                                         }
                                     )

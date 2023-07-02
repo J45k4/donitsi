@@ -1,54 +1,59 @@
 use crate::args::RunArgs;
-use crate::parser::Node;
+use crate::vm::Vm;
+use crate::parser::ASTNode;
 use crate::parser::parse_code;
 use crate::window::run_window;
 
 
 pub fn run(args: RunArgs) {
-    let code = std::fs::read_to_string(args.path).unwrap();
+    // let code = std::fs::read_to_string(args.path).unwrap();
 
-    let ast = parse_code(&code);
+    // let ast = parse_code(&code);
 
-    for node in ast {
-        //println!("{:?}", node);
+    let mut vm = Vm::new();
 
-        match node {
-            Node::ObjectDef(o) => {
-                log::info!("ObjectDef: {}", o.name);
+    vm.run_file(&args.path);
 
-                if o.name == "Main" {
-                    for property in o.properties {
-                        log::info!("name {}", property.name);
+    // for node in ast {
+    //     //println!("{:?}", node);
 
-                        if property.name == "children" {
-                            match *property.value {
-                                Node::ObjectDef(o) => {
-                                    log::info!("ObjectDef: {}", o.name);
+    //     match node {
+    //         ASTNode::ObjectDef(o) => {
+    //             log::info!("ObjectDef: {}", o.name);
 
-                                    let mut title = "Donitsi".to_string();
+    //             if o.name == "Main" {
+    //                 for property in o.properties {
+    //                     log::info!("name {}", property.name);
 
-                                    for prop in o.properties {
-                                        if prop.name == "title" {
-                                            match *prop.value {
-                                                Node::LiteralString(s) => {
-                                                    title = s;
-                                                }
-                                                _ => {}
-                                            }
-                                        }
-                                    }
+    //                     if property.name == "children" {
+    //                         match *property.value {
+    //                             ASTNode::ObjectDef(o) => {
+    //                                 log::info!("ObjectDef: {}", o.name);
 
-                                    if o.name == "Window" {
-                                        run_window(&title);
-                                    }
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
+    //                                 let mut title = "Donitsi".to_string();
+
+    //                                 for prop in o.properties {
+    //                                     if prop.name == "title" {
+    //                                         match *prop.value {
+    //                                             ASTNode::LiteralString(s) => {
+    //                                                 title = s;
+    //                                             }
+    //                                             _ => {}
+    //                                         }
+    //                                     }
+    //                                 }
+
+    //                                 if o.name == "Window" {
+    //                                     run_window(&title);
+    //                                 }
+    //                             }
+    //                             _ => {}
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         _ => {}
+    //     }
+    // }
 }

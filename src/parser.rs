@@ -49,20 +49,20 @@ enum Token {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Lambda {
-	pub params: Vec<Node>,
-	pub body: Vec<Node>,
+	pub params: Vec<ASTNode>,
+	pub body: Vec<ASTNode>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Assignment {
-	pub left: Box<Node>,
-	pub right: Box<Node>,
+	pub left: Box<ASTNode>,
+	pub right: Box<ASTNode>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Property {
 	pub name: String,
-	pub value: Box<Node>,
+	pub value: Box<ASTNode>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -73,19 +73,19 @@ pub struct ObjectDef {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ForLoop {
-	pub iterator: Box<Node>,
-	pub body: Box<Node>,
+	pub iterator: Box<ASTNode>,
+	pub body: Box<ASTNode>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Array {
-	pub items: Vec<Node>,
+	pub items: Vec<ASTNode>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Call {
-	pub callee: Box<Node>,
-	pub arguments: Vec<Node>,
+	pub callee: Box<ASTNode>,
+	pub arguments: Vec<ASTNode>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -112,12 +112,12 @@ pub struct StructDef {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct FnDef {
-	pub params: Vec<Node>,
-	pub body: Vec<Node>,
+	pub params: Vec<ASTNode>,
+	pub body: Vec<ASTNode>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Node {
+pub enum ASTNode {
 	Ident(String),
 	Lambda(Lambda),
 	Assignment(Assignment),
@@ -125,10 +125,10 @@ pub enum Node {
 	ForLoop(ForLoop),
 	Array(Array),
 	Call(Call),
-	VarDef(String, Box<Node>),
-	TypeDef(String, Vec<Node>),
-	Property(String, Box<Node>),
-	Object(String, Vec<Node>),
+	VarDef(String, Box<ASTNode>),
+	TypeDef(String, Vec<ASTNode>),
+	Property(String, Box<ASTNode>),
+	Object(String, Vec<ASTNode>),
 	LiteralString(String),
 	LiteralInt(i64),
 	LiteralDecimal(f64),
@@ -174,7 +174,7 @@ fn parse_object_def_properties(tokens: &mut Vec<Token>) -> Vec<Property> {
 	properties
 }
 
-fn parse_list(tokens: &mut Vec<Token>) -> Vec<Node> {
+fn parse_list(tokens: &mut Vec<Token>) -> Vec<ASTNode> {
 	println!("parse_list");
 
 	let mut list = Vec::new();
@@ -196,7 +196,7 @@ fn parse_list(tokens: &mut Vec<Token>) -> Vec<Node> {
 	list
 }
 
-fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Node {
+fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> ASTNode {
 	println!("Identifier: {:?}", ident);
 
 	let next_token = tokens.pop().unwrap();
@@ -205,7 +205,7 @@ fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Node {
 		Token::OpenBrace => {
 			let props: Vec<Property> = parse_object_def_properties(&mut tokens);
 		
-			Node::ObjectDef(
+			ASTNode::ObjectDef(
 				ObjectDef {
 					name: ident.to_string(),
 					properties: props,
@@ -215,10 +215,10 @@ fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Node {
 		Token::Equal => {
 			tokens.pop();
 
-			let left = Node::Ident(ident.to_string());
+			let left = ASTNode::Ident(ident.to_string());
 			let right = parse_node(&mut tokens).unwrap();
 
-			let node = Node::Assignment(
+			let node = ASTNode::Assignment(
 				Assignment {
 					left: Box::new(left),
 					right: Box::new(right),
@@ -229,7 +229,7 @@ fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Node {
 		},
 		Token::OpenParen => {
 			let mut call = Call {
-				callee: Box::new(Node::Ident(ident.to_string())),
+				callee: Box::new(ASTNode::Ident(ident.to_string())),
 				arguments: Vec::new(),
 			};
 
@@ -240,7 +240,7 @@ fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Node {
 					},
 					Token::String(str) => {
 						println!("String: {}", str);
-						call.arguments.push(Node::LiteralString(str));
+						call.arguments.push(ASTNode::LiteralString(str));
 					},
 					_ => {
 						todo!();
@@ -248,7 +248,7 @@ fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Node {
 				}
 			};
 
-			Node::Call(call)
+			ASTNode::Call(call)
 		},
 		// Token::OpenBracket => {
 		// 	parse_list(tokens)
@@ -358,7 +358,7 @@ fn parse_func_def(tokens: &mut Vec<Token>) -> FnDef {
 	// }
 }
 
-fn parse_node(tokens: &mut Vec<Token>) -> Option<Node> {
+fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 	println!("parse_node");
 
 	match tokens.pop().unwrap() {
@@ -367,10 +367,10 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<Node> {
 		},
 		Token::String(str) => {
 			println!("LiteralString: {:?}", str);
-			Some(Node::LiteralString(str))
+			Some(ASTNode::LiteralString(str))
 		},
 		Token::Int(i) => {
-			Some(Node::LiteralInt(i))
+			Some(ASTNode::LiteralInt(i))
 		},
 		Token::CloseBrace => {
 			None
@@ -399,10 +399,10 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<Node> {
 				items: items,
 			};
 
-			Some(Node::Array(array))
+			Some(ASTNode::Array(array))
 		},
 		Token::OpenParen => {
-			Some(Node::FnDef(parse_func_def(tokens)))
+			Some(ASTNode::FnDef(parse_func_def(tokens)))
 		},
 		Token::Struct => {
 			println!("Struct");
@@ -460,7 +460,7 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<Node> {
 				}
 			}
 
-			Some(Node::StructDef(struct_def))
+			Some(ASTNode::StructDef(struct_def))
 		},
 		_ => {
 			todo!();
@@ -468,7 +468,7 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<Node> {
 	}
 }
 
-pub fn parse_code(input: &str) -> Vec<Node> {
+pub fn parse_code(input: &str) -> Vec<ASTNode> {
 	let lexer = Token::lexer(input);
 	let mut tokens: Vec<Token> = lexer.collect();
 	tokens.reverse();
@@ -485,4 +485,51 @@ pub fn parse_code(input: &str) -> Vec<Node> {
 	}
 
 	ast
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::parse_code;
+
+    #[test]
+    fn it_works() {
+        let code = r#"Main {
+            children: Window {
+                title: "Testi Ikkuna"
+                children: [
+                    Box {
+                        onClick: () => {
+                            info("Hello world")
+                            info("Hello world")
+                            info("Hello world")
+                            info("Hello world")
+                        }
+                        children: [
+                            Text {
+                                title: "qwerty"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }"#;
+
+        parse_code(code);
+    }
+
+    #[test]
+    fn test_parse_struct() {
+        let code = r#"
+            struct Person {
+                name: "Testi"
+                age: Int
+
+                say_hello: () => {
+                    info("Hello world")
+                }
+            }
+        "#;
+
+        parse_code(code);
+    }
 }

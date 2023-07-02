@@ -1,6 +1,5 @@
 use crate::args::Args;
 use crate::args::Commands;
-use crate::parser::parse_code;
 use clap::Parser;
 
 mod parser;
@@ -11,7 +10,8 @@ mod window;
 mod component;
 mod donitsi;
 mod components;
-mod ui_tests;
+mod vm;
+mod types;
 
 fn main() {
     env_logger::builder()
@@ -25,6 +25,4 @@ fn main() {
             commands::run(run_args);
         }
     }
-
-    log::info!("Hello, world!");
 }
