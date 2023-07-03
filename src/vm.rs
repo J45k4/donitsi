@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::component::Component;
+use crate::component::Object;
 use crate::parser::ASTNode;
 use crate::parser::parse_code;
+use crate::types::Value;
 
 struct StructField {
     name: String,
@@ -30,16 +31,6 @@ pub enum ByteCode {
     MakeArray(usize),
     MakeFn(usize),
     Call(usize),
-}
-
-#[derive(Debug)]
-enum Value {
-    Int(i32),
-    Float(f32),
-    String(String),
-    Bool(bool),
-    Array(Vec<Value>),
-    Null,
 }
 
 #[derive(Debug)]
@@ -104,13 +95,13 @@ struct CodeFile {
     pc: usize,
 }
 
-#[derive(Debug)]
 pub struct Vm {
     file_path_map: HashMap<String, usize>,
     files: Vec<CodeFile>,
     ident_map: HashMap<String, usize>,
     current_file: usize,
     scope: Scope,
+    objects: HashMap<String, Box<dyn Object>>,
 }
 
 impl Vm {
@@ -121,7 +112,12 @@ impl Vm {
             current_file: 0,
             scope: Scope::new(),
             ident_map: HashMap::new(),
+            objects: HashMap::new(),
         }
+    }
+
+    pub fn register_obj(&mut self, name: &str, obj: Box<dyn Object>) {
+        self.objects.insert(name.to_string(), obj);
     }
 
     pub fn run_file<P: AsRef<Path>>(mut self, path: P) -> Self {
@@ -205,6 +201,7 @@ impl Vm {
             ASTNode::Lambda(_) => todo!(),
             ASTNode::Assignment(_) => todo!(),
             ASTNode::ObjectDef(obj) => {
+
                 for field in &obj.properties {
                     self.compile_node(bytecode, &field.value);
                     bytecode.push(ByteCode::StoreField(self.get_ident(&field.name)));

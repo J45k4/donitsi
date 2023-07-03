@@ -8,10 +8,9 @@ mod args;
 mod commands;
 mod window;
 mod component;
-mod donitsi;
-mod components;
 mod vm;
 mod types;
+mod ui;
 
 fn main() {
     env_logger::builder()
