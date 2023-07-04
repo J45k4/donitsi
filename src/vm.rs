@@ -93,6 +93,7 @@ impl IdentMap {
 struct CodeFile {
     bytecode: Vec<ByteCode>,
     pc: usize,
+    ast: Vec<ASTNode>,
 }
 
 pub struct Vm {
@@ -114,6 +115,10 @@ impl Vm {
             ident_map: HashMap::new(),
             objects: HashMap::new(),
         }
+    }
+
+    pub fn get_code_files(&self) -> &Vec<CodeFile> {
+        &self.files
     }
 
     pub fn register_obj(&mut self, name: &str, obj: Box<dyn Object>) {
@@ -186,6 +191,7 @@ impl Vm {
         let mut code_file = CodeFile {
             bytecode: Vec::new(),
             pc: 0,
+            ast: ast.clone(),
         };
 
         for node in ast {
@@ -226,7 +232,7 @@ impl Vm {
 
             },
             ASTNode::VarDef(_, _) => todo!(),
-            ASTNode::TypeDef(_, _) => todo!(),
+            ASTNode::TypeDef(_) => { /* We are going to ignore types in compiler for now */},
             ASTNode::Property(_, _) => todo!(),
             ASTNode::Object(_, _) => todo!(),
             ASTNode::LiteralString(lit) => bytecode.push(ByteCode::LoadStrLit(self.get_ident(&lit))),
@@ -253,6 +259,12 @@ impl Vm {
                     bytecode.push(ByteCode::AddField(ident_id));
                 }
             },
+            ASTNode::Var(def) => {
+
+            },
+            ASTNode::ProbAccess(prob) => {
+
+            }
         }
     }
 }
@@ -285,7 +297,55 @@ mod tests {
             }
         }
         "#);
+    }
 
-        println!("{:#?}", vm);
+    #[test]
+    fn compile_todo_app() {
+        let mut vm = Vm::new();
+
+        vm.compile_code(r#"
+        type Todo {
+            id: int
+            title: string
+            done: bool
+        }
+
+        Todo todo = [] 
+
+        Window {
+            title: "Todo app"
+            children: [
+                Div {
+                    children: [
+                        Div {
+                            children: todos.map((p) => Div {
+                                flex_direction: FlexDirection.Row
+                                children: [
+                                    Text {
+                                        text: p.title
+                                    },
+                                    Checkbox {
+                                        checked: p.done
+                                    }
+                                ]
+                            })
+                        }
+                        Div {
+                            children: [
+                                TextInput {
+                                    placeholder: "Search word"
+                                }
+                            ] 
+                        }
+                    ]
+                }
+            ]
+        }"#);
+
+        let files = vm.get_code_files();
+
+        for file in files {
+            println!("{:?}", file);
+        }
     }
 }

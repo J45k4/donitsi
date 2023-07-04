@@ -17,7 +17,7 @@ fn main() {
         .filter_level(log::LevelFilter::Info)
         .init();
 
-    let args = Args::parse();
+    let args: Args = Args::parse();
 
     match args.command {
         Commands::Run(run_args) => {

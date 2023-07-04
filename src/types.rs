@@ -9,7 +9,7 @@ pub enum Value {
 }
 
 pub struct Callback<T> {
-
+    _phantom: std::marker::PhantomData<T>,
 }
 
 impl<T> Callback<T> {
