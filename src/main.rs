@@ -11,6 +11,7 @@ mod component;
 mod vm;
 mod types;
 mod ui;
+mod pretty;
 
 fn main() {
     env_logger::builder()

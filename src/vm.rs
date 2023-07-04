@@ -4,6 +4,7 @@ use std::path::Path;
 use crate::component::Object;
 use crate::parser::ASTNode;
 use crate::parser::parse_code;
+use crate::pretty::ast_to_pretty_string;
 use crate::types::Value;
 
 struct StructField {
@@ -91,9 +92,39 @@ impl IdentMap {
 
 #[derive(Debug)]
 struct CodeFile {
+    path: String,
     bytecode: Vec<ByteCode>,
     pc: usize,
     ast: Vec<ASTNode>,
+}
+
+impl CodeFile {
+    pub fn ast_to_pretty_string(&self) -> String {
+        let mut s = String::new();
+
+        for node in self.ast.iter() {
+           s += &ast_to_pretty_string(&node);
+        }
+        s
+    }
+
+    pub fn to_pretty_string(&self) -> String {
+        let mut s = String::new();
+
+        s += format!("pc: {}\n", self.pc).as_str();
+
+        if !self.path.is_empty() {
+            s.push_str(&format!("File: {}\n", self.path));
+        }
+
+        for (i, bc) in self.bytecode.iter().enumerate() {
+            s.push_str(&format!("{:04} {:?}\n", i, bc));
+        }
+
+        s += &self.ast_to_pretty_string();
+
+        s
+    }
 }
 
 pub struct Vm {
@@ -189,6 +220,7 @@ impl Vm {
 
     fn gen_codefile(&mut self, ast: Vec<ASTNode>) -> CodeFile {
         let mut code_file = CodeFile {
+            path: String::new(),
             bytecode: Vec::new(),
             pc: 0,
             ast: ast.clone(),
@@ -205,8 +237,12 @@ impl Vm {
         match node {
             ASTNode::Ident(ident) => bytecode.push(ByteCode::Load(self.get_ident(ident))),
             ASTNode::Lambda(_) => todo!(),
-            ASTNode::Assignment(_) => todo!(),
-            ASTNode::ObjectDef(obj) => {
+            ASTNode::Assign(asg) => {
+                self.compile_node(bytecode, &asg.left);
+                self.compile_node(bytecode, &asg.right);
+                bytecode.push(ByteCode::Store);
+            },
+            ASTNode::Object(obj) => {
 
                 for field in &obj.properties {
                     self.compile_node(bytecode, &field.value);
@@ -231,10 +267,9 @@ impl Vm {
                 bytecode.push(ByteCode::Call(call.arguments.len()))
 
             },
-            ASTNode::VarDef(_, _) => todo!(),
             ASTNode::TypeDef(_) => { /* We are going to ignore types in compiler for now */},
             ASTNode::Property(_, _) => todo!(),
-            ASTNode::Object(_, _) => todo!(),
+            ASTNode::Object(obj) => todo!(),
             ASTNode::LiteralString(lit) => bytecode.push(ByteCode::LoadStrLit(self.get_ident(&lit))),
             ASTNode::LiteralInt(lit) => bytecode.push(ByteCode::LoadIntLit(*lit as usize)),
             ASTNode::LiteralDecimal(_) => todo!(),
@@ -323,7 +358,7 @@ mod tests {
                                 children: [
                                     Text {
                                         text: p.title
-                                    },
+                                    }
                                     Checkbox {
                                         checked: p.done
                                     }
@@ -345,7 +380,7 @@ mod tests {
         let files = vm.get_code_files();
 
         for file in files {
-            println!("{:?}", file);
+            println!("{}", file.to_pretty_string());
         }
     }
 }

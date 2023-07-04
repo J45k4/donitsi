@@ -34,7 +34,7 @@ enum Token {
 	#[token(".")]
 	Dot,
 	#[token("=")]
-	Equal,
+	Assigment,
 	#[regex(r#""[^"]*""#, |t| t.slice()[1..t.slice().len()-1].to_string())]
 	String(String),
 	#[regex(r"-?[0-9]+", |t| t.slice().parse::<i64>())]
@@ -62,7 +62,7 @@ pub struct Lambda {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Assignment {
+pub struct Assign {
 	pub left: Box<ASTNode>,
 	pub right: Box<ASTNode>,
 }
@@ -74,7 +74,7 @@ pub struct Property {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ObjectDef {
+pub struct Object {
 	pub name: String,
 	pub properties: Vec<Property>,
 }
@@ -104,6 +104,7 @@ pub enum VarType {
 	Var(String),
 	StrLit(String),
 	FnDef(FnDef),
+	Ident(String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -133,7 +134,7 @@ pub struct TypeDef {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Var {
 	pub name: String,
-	pub typ: VarType,
+	pub typ: String,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -146,14 +147,12 @@ pub struct ProbAccess {
 pub enum ASTNode {
 	Ident(String),
 	Lambda(Lambda),
-	Assignment(Assignment),
-	ObjectDef(ObjectDef),
+	Assign(Assign),
+	Object(Object),
 	ForLoop(ForLoop),
 	Array(Array),
 	Call(Call),
-	VarDef(String, Box<ASTNode>),
 	Property(String, Box<ASTNode>),
-	Object(String, Vec<ASTNode>),
 	LiteralString(String),
 	LiteralInt(i64),
 	LiteralDecimal(f64),
@@ -257,14 +256,14 @@ fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Option<ASTNode>
 
 			let props: Vec<Property> = parse_obj_probs(&mut tokens);
 		
-			Some(ASTNode::ObjectDef(
-				ObjectDef {
+			Some(ASTNode::Object(
+				Object {
 					name: ident.to_string(),
 					properties: props,
 				}
 			))
 		},
-		Token::Equal => {
+		Token::Assigment => {
 			tokens.pop();
 
 			println!("parsing assignment: {}", ident);
@@ -272,8 +271,8 @@ fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Option<ASTNode>
 			let left = ASTNode::Ident(ident.to_string());
 			let right = parse_node(&mut tokens).unwrap();
 
-			let node: ASTNode = ASTNode::Assignment(
-				Assignment {
+			let node: ASTNode = ASTNode::Assign(
+				Assign {
 					left: Box::new(left),
 					right: Box::new(right),
 				}
@@ -375,6 +374,7 @@ fn parse_func_def(tokens: &mut Vec<Token>) -> FnDef {
 				break;
 			},
 			_ => {
+
 				let n = match parse_node(tokens) {
 					Some(n) => n,
 					None => break,
@@ -382,7 +382,9 @@ fn parse_func_def(tokens: &mut Vec<Token>) -> FnDef {
 
 				fn_def.body.push(n);
 
-				if braced {
+				if !braced {
+					println!("breaking since not braced");
+
 					break;
 				}
 			}
@@ -435,34 +437,104 @@ fn parse_func_def(tokens: &mut Vec<Token>) -> FnDef {
 	// }
 }
 
-fn parse_body_node(tokens: &mut Vec<Token>) {
-	Token::Ident(ident) => {
-		tokens.pop();
+fn parse_body_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+	println!("parse_body_node");
 
-		println!("parsing identifier: {}", ident);
+	let next = tokens.pop().unwrap();
 
-		let var = Var {
-			name: ident.to_string(),
-			typ: VarType::Var(ident.to_string()),
-		};
+	match next {
+		Token::Ident(ident) => {
+			println!("ident: {}", ident);
 
-		match tokens.last().unwrap() {
-			Token::Equal => {
-				tokens.pop();
-				let right = parse_node(&mut tokens).unwrap();
+			match tokens.pop().unwrap() {
+				Token::Ident(var_name) => {
+					println!("var name: {}", var_name);
 
-				let node: ASTNode = ASTNode::Assignment(
-					Assignment {
-						left: Box::new(ASTNode::Var(var)),
-						right: Box::new(right),
+					let var = Var {
+						name: var_name,
+						typ: ident,
+					};
+					let next = tokens.last().unwrap();
+
+					match next {
+						Token::Assigment => {
+							tokens.pop();
+							Some(ASTNode::Assign(Assign {
+								left: Box::new(ASTNode::Var(var)),
+								right: Box::new(parse_node(tokens).unwrap()),
+							}))
+						},
+						_ => None
 					}
-				);
+				},
+				Token::OpenBrace => {
+					let props: Vec<Property> = parse_obj_probs(tokens);
+		
+					Some(ASTNode::Object(
+						Object {
+							name: ident.to_string(),
+							properties: props,
+						}
+					))
+				},	
+				_ => {
+					todo!();
+				}
+			}
+		},
+		Token::Type => {
+			println!("type");
 
-				Some(node)
-			},
-			_ => parse_node(tokens)
+			let ident = expect_identifier(tokens);
+
+			expect_token(tokens, Token::OpenBrace);
+
+			let mut type_def = TypeDef {
+				name: ident,
+				fields: Vec::new(),
+			};
+			
+			while let Some(token) = tokens.pop() {
+				match token {
+					Token::CloseBrace => {
+						break;
+					},
+					Token::Ident(ident) => {
+						println!("Identifier: {}", ident);
+
+						expect_token(tokens, Token::Colon);
+
+						let typ = match tokens.pop().unwrap() {
+							Token::IntDef => VarType::Int,
+							Token::FloatDef => VarType::Float,
+							Token::StringDef => VarType::String,
+							Token::Ident(ident) => VarType::Var(ident),
+							Token::String(str) => VarType::StrLit(str),
+							Token::OpenParen => VarType::FnDef(parse_func_def(tokens)),
+							_ => {
+								todo!();
+							}
+						};
+
+						let field = TypeField {
+							name: ident,
+							typ: typ,
+						};
+
+						type_def.fields.push(field);
+					},
+					_ => {
+						todo!();
+					}
+				}
+			}
+
+			Some(ASTNode::TypeDef(type_def))
+		},
+		_ => {
+			todo!("Unexpected token: {:?}", next);
 		}
-	},
+	}
 }
 
 fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
@@ -573,53 +645,7 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
 			Some(ASTNode::StructDef(struct_def))
 		},
-		Token::Type => {
-			let ident = expect_identifier(tokens);
-
-			expect_token(tokens, Token::OpenBrace);
-
-			let mut type_def = TypeDef {
-				name: ident,
-				fields: Vec::new(),
-			};
-			
-			while let Some(token) = tokens.pop() {
-				match token {
-					Token::CloseBrace => {
-						break;
-					},
-					Token::Ident(ident) => {
-						println!("Identifier: {}", ident);
-
-						expect_token(tokens, Token::Colon);
-
-						let typ = match tokens.pop().unwrap() {
-							Token::IntDef => VarType::Int,
-							Token::FloatDef => VarType::Float,
-							Token::StringDef => VarType::String,
-							Token::Ident(ident) => VarType::Var(ident),
-							Token::String(str) => VarType::StrLit(str),
-							Token::OpenParen => VarType::FnDef(parse_func_def(tokens)),
-							_ => {
-								todo!();
-							}
-						};
-
-						let field = TypeField {
-							name: ident,
-							typ: typ,
-						};
-
-						type_def.fields.push(field);
-					},
-					_ => {
-						todo!();
-					}
-				}
-			}
-
-			Some(ASTNode::TypeDef(type_def))
-		},
+		Token::CloseParen => None,
 		// Token::DoubleColon => {
 		// 	println!("double colon");
 
@@ -641,7 +667,7 @@ pub fn parse_code(input: &str) -> Vec<ASTNode> {
 	let mut ast = Vec::new();
 
 	while let Some(_) = tokens.last() {
-		let node = match parse_node(&mut tokens) {
+		let node = match parse_body_node(&mut tokens) {
 			Some(n) => n,
 			None => break,
 		};
