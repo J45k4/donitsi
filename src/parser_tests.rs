@@ -14,8 +14,8 @@ mod tests {
 
         assert_eq!(ast.len(), 1);
         assert_eq!(ast, vec![
-            ASTNode::Object(
-                Object { 
+            ASTNode::StructIns(
+                StructIns { 
                     name: "Main".to_string(), 
                     properties: vec![]
                 }
@@ -34,8 +34,8 @@ mod tests {
 
         assert_eq!(ast.len(), 1);
         assert_eq!(ast, vec![
-            ASTNode::Object(
-                Object { 
+            ASTNode::StructIns(
+                StructIns { 
                     name: "Main".to_string(), 
                     properties: vec![
                         Property {
@@ -77,15 +77,15 @@ mod tests {
         let ast = parse_code(code);
 
         assert_eq!(ast, vec![
-            ASTNode::Object(
-                Object { 
+            ASTNode::StructIns(
+                StructIns { 
                     name: "Main".to_string(), 
                     properties: vec![
                         Property {
                             name: "children".to_string(),
                             value: Box::new(
-                                ASTNode::Object(
-                                    Object { 
+                                ASTNode::StructIns(
+                                    StructIns { 
                                         name: "Player".to_string(), 
                                         properties: vec![
                                             Property {
@@ -106,15 +106,15 @@ mod tests {
                                                     ASTNode::Array(
                                                         Array { 
                                                             items: vec![
-                                                                ASTNode::Object(
-                                                                    Object { 
+                                                                ASTNode::StructIns(
+                                                                    StructIns { 
                                                                         name: "RigidBody".to_string(), 
                                                                         properties: vec![
                                                                             Property {
                                                                                 name: "shape".to_string(),
                                                                                 value: Box::new(
-                                                                                    ASTNode::Object(
-                                                                                        Object { 
+                                                                                    ASTNode::StructIns(
+                                                                                        StructIns { 
                                                                                             name: "Box".to_string(), 
                                                                                             properties: vec![
                                                                                                 Property {

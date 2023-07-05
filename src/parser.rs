@@ -34,7 +34,7 @@ enum Token {
 	#[token(".")]
 	Dot,
 	#[token("=")]
-	Assigment,
+	Assign,
 	#[regex(r#""[^"]*""#, |t| t.slice()[1..t.slice().len()-1].to_string())]
 	String(String),
 	#[regex(r"-?[0-9]+", |t| t.slice().parse::<i64>())]
@@ -74,8 +74,13 @@ pub struct Property {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Object {
+pub struct StructIns {
 	pub name: String,
+	pub properties: Vec<Property>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Obj {
 	pub properties: Vec<Property>,
 }
 
@@ -148,7 +153,7 @@ pub enum ASTNode {
 	Ident(String),
 	Lambda(Lambda),
 	Assign(Assign),
-	Object(Object),
+	StructIns(StructIns),
 	ForLoop(ForLoop),
 	Array(Array),
 	Call(Call),
@@ -162,6 +167,7 @@ pub enum ASTNode {
 	TypeDef(TypeDef),
 	Var(Var),
 	ProbAccess(ProbAccess),
+	Obj(Obj),
 }
 
 fn expect_token(tokens: &mut Vec<Token>, expected: Token) {
@@ -256,14 +262,14 @@ fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Option<ASTNode>
 
 			let props: Vec<Property> = parse_obj_probs(&mut tokens);
 		
-			Some(ASTNode::Object(
-				Object {
+			Some(ASTNode::StructIns(
+				StructIns {
 					name: ident.to_string(),
 					properties: props,
 				}
 			))
 		},
-		Token::Assigment => {
+		Token::Assign => {
 			tokens.pop();
 
 			println!("parsing assignment: {}", ident);
@@ -457,7 +463,7 @@ fn parse_body_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 					let next = tokens.last().unwrap();
 
 					match next {
-						Token::Assigment => {
+						Token::Assign => {
 							tokens.pop();
 							Some(ASTNode::Assign(Assign {
 								left: Box::new(ASTNode::Var(var)),
@@ -470,13 +476,19 @@ fn parse_body_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 				Token::OpenBrace => {
 					let props: Vec<Property> = parse_obj_probs(tokens);
 		
-					Some(ASTNode::Object(
-						Object {
+					Some(ASTNode::StructIns(
+						StructIns {
 							name: ident.to_string(),
 							properties: props,
 						}
 					))
-				},	
+				},
+				Token::Assign => {
+					Some(ASTNode::Assign(Assign {
+						left: Box::new(ASTNode::Ident(ident.to_string())),
+						right: Box::new(parse_node(tokens).unwrap()),
+					}))
+				},
 				_ => {
 					todo!();
 				}
@@ -553,6 +565,7 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 			Some(ASTNode::LiteralString(str))
 		},
 		Token::Int(i) => {
+			println!("LiteralInt: {:?}", i);
 			Some(ASTNode::LiteralInt(i))
 		},
 		Token::CloseBrace => {
@@ -570,6 +583,11 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
 						tokens.pop();
 						break;
+					},
+					Token::Comma => {
+						println!("Comma");
+
+						tokens.pop();
 					},
 					_ => {
 						let node = parse_node(tokens).unwrap();
@@ -646,11 +664,11 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 			Some(ASTNode::StructDef(struct_def))
 		},
 		Token::CloseParen => None,
-		// Token::DoubleColon => {
-		// 	println!("double colon");
-
-
-		// },
+		Token::OpenBrace => {
+			Some(ASTNode::Obj(Obj{
+				properties: parse_obj_probs(tokens),
+			}))
+		},
 		_ => {
 			todo!("Unexpected token: {:?}", next);
 		}
@@ -681,6 +699,7 @@ pub fn parse_code(input: &str) -> Vec<ASTNode> {
 #[cfg(test)]
 mod tests {
     use crate::parser::parse_code;
+    use crate::pretty::ast_pretty_string;
 
     #[test]
     fn it_works() {
@@ -727,5 +746,98 @@ mod tests {
 	#[test]
 	fn test_parse_import() {
 
+	}
+
+	#[test]
+	fn parse_two_list_assigments() {
+		let code = r#"
+			a = [1, 2, 3]
+			b = [3, 2, 1]
+		"#;
+
+		let ast = parse_code(code);
+
+		println!("ast: {:?}", ast);
+
+		for node in ast {
+			println!("{}", ast_pretty_string(&node));
+		}
+	}
+
+	#[test]
+	fn parse_object_assigment() {
+		let code = r#"
+			a = {
+				name: "Testi"
+				age: 123
+			}
+		"#;
+
+		let ast = parse_code(code);
+
+		println!("ast: {:?}", ast);
+
+		for node in ast {
+			println!("{}", ast_pretty_string(&node));
+		}
+	}
+
+	#[test]
+	fn parse_var() {
+		let code = r#"TodoItem todo_item = {}"#;
+
+		let ast = parse_code(code);
+
+		println!("ast: {:?}", ast);
+
+		for node in ast {
+			println!("{}", ast_pretty_string(&node));
+		}
+	}
+	
+	#[test]
+	fn parse_nested_instances() {
+		let code = r#"
+			Window {
+				title: "test"
+				children: [
+					Box {
+						onClick: () => {
+							info("Hello world")
+						}
+						children: [
+							Text {
+								title: "qwerty"
+							}
+						]
+					}
+				]
+			}
+		"#;
+
+		let ast = parse_code(code);
+
+		println!("ast: {:?}", ast);
+
+		for node in ast {
+			println!("{}", ast_pretty_string(&node));
+		}
+	}
+
+	#[test]
+	fn test_parse_fn_without_params() {
+		let code = r#"
+			foo = () => {
+				return "Hello world"
+			}
+		"#;
+
+		let ast = parse_code(code);
+
+		println!("ast: {:?}", ast);
+
+		for node in ast {
+			println!("{}", ast_pretty_string(&node));
+		}
 	}
 }

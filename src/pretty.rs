@@ -1,6 +1,6 @@
 use crate::parser::ASTNode;
 
-pub fn ast_to_pretty_string(node: &ASTNode) -> String {
+pub fn ast_pretty_string(node: &ASTNode) -> String {
     let mut s = String::new();
 
     match node {
@@ -18,34 +18,38 @@ pub fn ast_to_pretty_string(node: &ASTNode) -> String {
             }
         },
         ASTNode::FnDef(fn_def) => {
-            println!("FnDef");
+            let c: String = fn_def.body.iter().map(|p| format!("{}", ast_pretty_string(p))).collect::<Vec<String>>().join("\n");
+            s += &format!("() => {{{}}}", c);
 
-            println!("Params:");
-            for (index, param) in fn_def.params.iter().enumerate() {
-                s += format!("[{}] param: {}\n", index, ast_to_pretty_string(param)).as_str();
-            }
+            // s += "FnDef: {}\n";
 
-            println!("Body:");
-            for (index, statement) in fn_def.body.iter().enumerate() {
-                s += format!("[{}] item: {}\n", index, ast_to_pretty_string(statement)).as_str();
-            }
+            // println!("Params:");
+            // for (index, param) in fn_def.params.iter().enumerate() {
+            //     s += format!("[{}] param: {}\n", index, ast_pretty_string(param)).as_str();
+            // }
+
+            // println!("Body:");
+            // for (index, statement) in fn_def.body.iter().enumerate() {
+            //     s += format!("[{}] item: {}\n", index, ast_pretty_string(statement)).as_str();
+            // }
         },
         ASTNode::Var(var) => {
-            s += format!("Var: {}\n", var.name).as_str();
+            s += format!("{} {}", var.typ, var.name).as_str();
         },
         ASTNode::Assign(assign) => {
-            println!("Assign");
-            s += &format!("left: {}", ast_to_pretty_string(&assign.left));
-            s += &format!("right: {}", ast_to_pretty_string(&assign.right));
+            s += &format!("{} = {}", ast_pretty_string(&assign.left), ast_pretty_string(&assign.right));
+            // s += "Assign:\n";
+            // s += &format!("left: {}", ast_pretty_string(&assign.left));
+            // s += &format!("right: {}", ast_pretty_string(&assign.right));
         },
         ASTNode::Ident(ident) => {
-            s += format!("Ident: {}\n", ident).as_str();
+            s += ident
         },
         ASTNode::LiteralString(lit) => {
-            s += format!("LiteralString: {}\n", lit).as_str();
+            s += &format!(r#""{}""#, lit);
         },
         ASTNode::LiteralInt(lit) => {
-            s += format!("LiteralInt: {}\n", lit).as_str();
+            s += &lit.to_string()
         },
         ASTNode::LiteralDecimal(lit) => {
             s += format!("LiteralDecimal: {}\n", lit).as_str();
@@ -53,11 +57,25 @@ pub fn ast_to_pretty_string(node: &ASTNode) -> String {
         ASTNode::LiteralPercent(lit) => {
             s += format!("LiteralPercent: {}\n", lit).as_str();
         },
-        ASTNode::Object(obj) => {
+        ASTNode::StructIns(obj) => {
+            s += &format!("{} {{\n", obj.name);
+            for prob in &obj.properties {
+                s += &format!("  {}: {}\n", prob.name, ast_pretty_string(&prob.value));
+            }
+            s += "}}\n";
+
             s += format!("Object: {}\n", obj.name).as_str();
         },
         ASTNode::Call(call) => {
             s += format!("Call: {:?}\n", call.callee).as_str();
+        },
+        ASTNode::Array(array) => {
+            s += &format!("[{}]", array.items.iter().map(|p| format!("{}", ast_pretty_string(p))).collect::<Vec<String>>().join(", "));
+        },
+        ASTNode::Obj(obj) => {
+            s += &format!("{{{}}}", obj.properties.iter()
+                .map(|p| format!("{}: {:?}", p.name, ast_pretty_string(&p.value)))
+                .collect::<Vec<String>>().join(", "))
         },
         _ => {}
 

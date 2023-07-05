@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::component::Object;
 use crate::parser::ASTNode;
 use crate::parser::parse_code;
-use crate::pretty::ast_to_pretty_string;
+use crate::pretty::ast_pretty_string;
 use crate::types::Value;
 
 struct StructField {
@@ -103,7 +103,7 @@ impl CodeFile {
         let mut s = String::new();
 
         for node in self.ast.iter() {
-           s += &ast_to_pretty_string(&node);
+           s += &ast_pretty_string(&node);
         }
         s
     }
@@ -242,7 +242,7 @@ impl Vm {
                 self.compile_node(bytecode, &asg.right);
                 bytecode.push(ByteCode::Store);
             },
-            ASTNode::Object(obj) => {
+            ASTNode::StructIns(obj) => {
 
                 for field in &obj.properties {
                     self.compile_node(bytecode, &field.value);
@@ -269,7 +269,7 @@ impl Vm {
             },
             ASTNode::TypeDef(_) => { /* We are going to ignore types in compiler for now */},
             ASTNode::Property(_, _) => todo!(),
-            ASTNode::Object(obj) => todo!(),
+            ASTNode::StructIns(obj) => todo!(),
             ASTNode::LiteralString(lit) => bytecode.push(ByteCode::LoadStrLit(self.get_ident(&lit))),
             ASTNode::LiteralInt(lit) => bytecode.push(ByteCode::LoadIntLit(*lit as usize)),
             ASTNode::LiteralDecimal(_) => todo!(),
@@ -300,6 +300,7 @@ impl Vm {
             ASTNode::ProbAccess(prob) => {
 
             }
+            ASTNode::Obj(obj) => todo!("Object literals are not supported yet"),
         }
     }
 }
