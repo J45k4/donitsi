@@ -18,8 +18,15 @@ pub fn ast_pretty_string(node: &ASTNode) -> String {
             }
         },
         ASTNode::FnDef(fn_def) => {
-            let c: String = fn_def.body.iter().map(|p| format!("{}", ast_pretty_string(p))).collect::<Vec<String>>().join("\n");
-            s += &format!("() => {{{}}}", c);
+            let body = if fn_def.body.len() == 0 {
+                "".to_string()
+            } else if fn_def.body.len() < 1 {
+                format!("{}", ast_pretty_string(&fn_def.body[0]))
+            } else {
+                fn_def.body.iter().map(|p: &ASTNode| format!("{}", ast_pretty_string(p))).collect::<Vec<String>>().join("\n")
+            };
+
+            s += &format!("() => {{{}}}", body);
 
             // s += "FnDef: {}\n";
 
@@ -76,6 +83,9 @@ pub fn ast_pretty_string(node: &ASTNode) -> String {
             s += &format!("{{{}}}", obj.properties.iter()
                 .map(|p| format!("{}: {:?}", p.name, ast_pretty_string(&p.value)))
                 .collect::<Vec<String>>().join(", "))
+        },
+        ASTNode::Ret(ret) => {
+            s += &format!("return {{{}}}", ast_pretty_string(&ret));
         },
         _ => {}
 

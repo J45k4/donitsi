@@ -301,6 +301,10 @@ impl Vm {
 
             }
             ASTNode::Obj(obj) => todo!("Object literals are not supported yet"),
+            ASTNode::Ret(ret) => {
+                // self.compile_node(bytecode, &ret.value);
+                // bytecode.push(ByteCode::Return);
+            },
         }
     }
 }
