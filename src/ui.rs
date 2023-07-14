@@ -1,31 +1,6 @@
 use crate::component::Object;
 use crate::types::Callback;
 
-pub enum UIComponent {
-    Div(Div),
-    Text(Text),
-}
-
-struct Renderer {
-
-} 
-
-impl Renderer {
-    pub fn render(&self, component: &dyn Object) {
-        println!("Rendering component: {}", component.get_name());
-    }
-}
-
-impl Object for Renderer {
-    fn get_name(&self) -> String {
-        "Renderer".to_string()
-    }
-
-    fn get_properties(&self) -> Vec<String> {
-        vec![]
-    }
-}
-
 pub enum FlexDir {
     Col,
     Row
@@ -37,7 +12,7 @@ impl Default for FlexDir {
     }
 }
 
-pub enum BoxChild {
+pub enum DivChild {
     Div(Div),
     Text(Text)
 }
@@ -45,7 +20,11 @@ pub enum BoxChild {
 pub struct Div {
     pub dir: FlexDir,
     pub flex_grow: Option<f32>,
-    pub children: Vec<BoxChild>
+    pub width: Option<f32>,
+    pub height: Option<f32>,
+    pub children: Vec<DivChild>,
+    pub vscroll: bool,
+    pub hscroll: bool,
 }
 
 impl Object for Div {

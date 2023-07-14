@@ -28,7 +28,7 @@ pub enum ByteCode {
     InstanceStruct(usize),
     LoadStrLit(usize),
     LoadIntLit(usize),
-    LoadFloatLit(f32),
+    LoadDecLit(f64),
     MakeArray(usize),
     MakeFn(usize),
     Call(usize),
@@ -121,8 +121,6 @@ impl CodeFile {
             s.push_str(&format!("{:04} {:?}\n", i, bc));
         }
 
-        s += &self.ast_to_pretty_string();
-
         s
     }
 }
@@ -130,10 +128,13 @@ impl CodeFile {
 pub struct Vm {
     file_path_map: HashMap<String, usize>,
     files: Vec<CodeFile>,
-    ident_map: HashMap<String, usize>,
+    str_to_id: HashMap<String, usize>,
+    id_to_str: HashMap<usize, String>,
+    float_map: HashMap<f64, usize>,
     current_file: usize,
     scope: Scope,
     objects: HashMap<String, Box<dyn Object>>,
+    stack: Vec<Value>,
 }
 
 impl Vm {
@@ -143,8 +144,11 @@ impl Vm {
             files: Vec::new(),
             current_file: 0,
             scope: Scope::new(),
-            ident_map: HashMap::new(),
+            str_to_id: HashMap::new(),
+            id_to_str: HashMap::new(),
+            float_map: HashMap::new(),
             objects: HashMap::new(),
+            stack: Vec::new(),
         }
     }
 
@@ -152,8 +156,88 @@ impl Vm {
         &self.files
     }
 
+    pub fn to_pretty_string(&self) -> String {
+        let mut s = String::new();
+
+        for file in &self.files {
+            s += &file.to_pretty_string();
+        }
+
+        s
+    }
+
     pub fn register_obj(&mut self, name: &str, obj: Box<dyn Object>) {
         self.objects.insert(name.to_string(), obj);
+    }
+
+    pub fn run(&mut self) {
+        let current_file = &self.files[self.current_file];
+
+        while current_file.pc < current_file.bytecode.len() {
+            let bc = &current_file.bytecode[current_file.pc];
+
+            match bc {
+                ByteCode::Load(id) => {
+                    // let val = self.scope.get(id).unwrap().clone();
+
+                    // self.scope.insert(*id, val);
+                }
+                ByteCode::Store => {}
+                ByteCode::CreateStruct(id) => {
+                    // let struct_def = self.objects.get(id).unwrap().clone();
+
+                    // self.scope.insert(*id, struct_def);
+                }
+                ByteCode::AddField(id) => {
+                    // let struct_def = self.scope.get(id).unwrap().clone();
+
+                    // self.scope.insert(*id, struct_def);
+                }
+                ByteCode::LoadStruct(id) => {
+                    // let struct_def = self.scope.get(id).unwrap().clone();
+
+                    // self.scope.insert(*id, struct_def);
+                }
+                ByteCode::StoreField(id) => {
+                    // let struct_def = self.scope.get(id).unwrap().clone();
+
+                    // self.scope.insert(*id, struct_def);
+                }
+                ByteCode::InstanceStruct(id) => {
+                    // let struct_def = self.scope.get(id).unwrap().clone();
+
+                    // self.scope.insert(*id, struct_def);
+                }
+                ByteCode::LoadStrLit(id) => {
+                    let s: String = self.id_to_str.get(id).unwrap().clone();
+                    self.stack.push(Value::String(s));
+                }
+                ByteCode::LoadIntLit(id) => {
+                    let i: i64 = *id as i64;
+                    self.stack.push(Value::Int(i));
+                }
+                ByteCode::LoadDecLit(id) => {
+                    // let struct_def = self.scope.get(id).unwrap().clone();
+
+                    // self.scope.insert(*id, struct_def);
+                }
+                ByteCode::MakeArray(id) => {
+                    // let struct_def = self.scope.get(id).unwrap().clone();
+
+                    // self.scope.insert(*id, struct_def);
+                }
+                ByteCode::MakeFn(id) => {
+                    // let struct_def = self.scope.get(id).unwrap().clone();
+
+                    // self.scope.insert(*id, struct_def);
+                }
+                ByteCode::Call(id) => {
+                    // let struct_def = self.scope.get(id).unwrap().clone();
+
+                    // self.scope.insert(*id, struct_def);
+                }
+            }
+        }
     }
 
     pub fn run_file<P: AsRef<Path>>(mut self, path: P) -> Self {
@@ -172,13 +256,14 @@ impl Vm {
         self
     }
 
-    fn get_ident(&mut self, ident: &str) -> usize {
-        match self.ident_map.get(ident) {
+    fn get_str(&mut self, ident: &str) -> usize {
+        match self.str_to_id.get(ident) {
             Some(id) => *id,
             None => {
-                let id = self.ident_map.len();
+                let id = self.str_to_id.len();
 
-                self.ident_map.insert(ident.to_string(), id);
+                self.str_to_id.insert(ident.to_string(), id);
+                self.id_to_str.insert(id, ident.to_string());
 
                 id
             }
@@ -192,7 +277,7 @@ impl Vm {
 
         let ast = parse_code(&code);
 
-        let code_file = self.gen_codefile(ast);
+        let code_file = self.gen_codefile(&ast);
 
         let path = path.display().to_string();
 
@@ -213,17 +298,21 @@ impl Vm {
     pub fn compile_code(&mut self, code: &str) {
         let ast = parse_code(code);
 
+        self.compile_ast(&ast);
+    }
+
+    pub fn compile_ast(&mut self, ast: &[ASTNode]) {
         let code_file = self.gen_codefile(ast);
 
         self.files.push(code_file);
     }
 
-    fn gen_codefile(&mut self, ast: Vec<ASTNode>) -> CodeFile {
+    fn gen_codefile(&mut self, ast: &[ASTNode]) -> CodeFile {
         let mut code_file = CodeFile {
             path: String::new(),
             bytecode: Vec::new(),
             pc: 0,
-            ast: ast.clone(),
+            ast: ast.to_vec(),
         };
 
         for node in ast {
@@ -235,7 +324,7 @@ impl Vm {
 
     fn compile_node(&mut self, bytecode: &mut Vec<ByteCode>, node: &ASTNode) {
         match node {
-            ASTNode::Ident(ident) => bytecode.push(ByteCode::Load(self.get_ident(ident))),
+            ASTNode::Ident(ident) => bytecode.push(ByteCode::Load(self.get_str(ident))),
             ASTNode::Lambda(_) => todo!(),
             ASTNode::Assign(asg) => {
                 self.compile_node(bytecode, &asg.left);
@@ -246,10 +335,10 @@ impl Vm {
 
                 for field in &obj.properties {
                     self.compile_node(bytecode, &field.value);
-                    bytecode.push(ByteCode::StoreField(self.get_ident(&field.name)));
+                    bytecode.push(ByteCode::StoreField(self.get_str(&field.name)));
                 }
 
-                bytecode.push(ByteCode::Load(self.get_ident(&obj.name)));
+                bytecode.push(ByteCode::Load(self.get_str(&obj.name)));
             },
             ASTNode::ForLoop(_) => todo!(),
             ASTNode::Array(a) => {
@@ -270,9 +359,9 @@ impl Vm {
             ASTNode::TypeDef(_) => { /* We are going to ignore types in compiler for now */},
             ASTNode::Property(_, _) => todo!(),
             ASTNode::StructIns(obj) => todo!(),
-            ASTNode::LiteralString(lit) => bytecode.push(ByteCode::LoadStrLit(self.get_ident(&lit))),
+            ASTNode::LiteralString(lit) => bytecode.push(ByteCode::LoadStrLit(self.get_str(&lit))),
             ASTNode::LiteralInt(lit) => bytecode.push(ByteCode::LoadIntLit(*lit as usize)),
-            ASTNode::LiteralDecimal(_) => todo!(),
+            ASTNode::LiteralDecimal(lit) => bytecode.push(ByteCode::LoadDecLit(*lit)),
             ASTNode::LiteralPercent(_) => todo!(),
             ASTNode::FnDef(def) => {
                 for p in &def.params {
@@ -286,11 +375,11 @@ impl Vm {
                 bytecode.push(ByteCode::MakeFn(def.params.len()));
             },
             ASTNode::StructDef(def) => {
-                let ident_id = self.get_ident(&def.name);
+                let ident_id = self.get_str(&def.name);
                 bytecode.push(ByteCode::CreateStruct(ident_id));
                 
                 for field in &def.fields {
-                    let ident_id = self.get_ident(&field.name);
+                    let ident_id = self.get_str(&field.name);
                     bytecode.push(ByteCode::AddField(ident_id));
                 }
             },

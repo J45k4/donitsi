@@ -660,6 +660,7 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 			println!("LiteralInt: {:?}", i);
 			Some(ASTNode::LiteralInt(i))
 		},
+		Token::Decimal(d) => Some(ASTNode::LiteralDecimal(d)),
 		Token::CloseBrace => {
 			None
 		},

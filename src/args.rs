@@ -12,9 +12,18 @@ pub struct Args {
 pub enum Commands {
     #[clap(name = "run")]
     Run(RunArgs),
+    #[clap(name = "ast")]
+    Ast(AstArgs),
+    #[clap(name = "donitsi")]
+    Donitsi,
 }
 
 #[derive(Debug, Parser)]
 pub struct RunArgs {
     pub path: String,
+}
+
+#[derive(Debug, Parser)]
+pub struct AstArgs {
+    pub path: String
 }

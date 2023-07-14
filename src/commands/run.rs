@@ -10,9 +10,7 @@ pub fn run(args: RunArgs) {
 
     // let ast = parse_code(&code);
 
-    let mut vm = Vm::new();
-
-    vm.run_file(&args.path);
+    Vm::new().run_file(&args.path);
 
     // for node in ast {
     //     //println!("{:?}", node);

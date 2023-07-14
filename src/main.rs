@@ -12,8 +12,11 @@ mod vm;
 mod types;
 mod ui;
 mod pretty;
+mod donitsi;
+mod components;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     env_logger::builder()
         .filter_level(log::LevelFilter::Info)
         .init();
@@ -23,6 +26,12 @@ fn main() {
     match args.command {
         Commands::Run(run_args) => {
             commands::run(run_args);
+        },
+        Commands::Ast(ast_args) => {
+            commands::ast(ast_args);
+        },
+        Commands::Donitsi => {
+            commands::donitsi().await;
         }
     }
 }
