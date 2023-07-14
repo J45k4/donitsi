@@ -50,9 +50,6 @@ Window {
                                     PlusShape
                                 ],
                                 on_click: () => {
-                                    todos.push({
-                                        name: new_todo_name
-                                    })
                                     new_todo_name = ""
                                 }
                             }
@@ -69,9 +66,7 @@ Window {
                             text: todo.name
                         }
                         Div {
-                            children: [
-                                MinusShape
-                            ]
+                            children: []
                         }
                     ]
                 }

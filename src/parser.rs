@@ -223,11 +223,16 @@ fn parse_obj_probs(tokens: &mut Vec<Token>) -> Vec<Property> {
 				};
 				properties.push(prop);
 			},
+			Token::Comma => {
+				continue;
+			},
 			_ => {
 				panic!("Unexpected token while parsing object definition properties: {:?}", token)
 			}
 		}
 	}
+
+	println!("parse_object_def_properties end");
 
 	properties
 }
@@ -254,8 +259,8 @@ fn parse_list(tokens: &mut Vec<Token>) -> Vec<ASTNode> {
 	list
 }
 
-fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Option<ASTNode> {
-	println!("parse_identifier: {:?}", ident);
+fn parse_ident(mut tokens: &mut Vec<Token>, ident: &str) -> Option<ASTNode> {
+	println!("parse_ident: {:?}", ident);
 
 	let next = tokens.last().unwrap().clone();
 
@@ -309,7 +314,10 @@ fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Option<ASTNode>
 						tokens.pop();
 					},
 					_ => {
-						call.arguments.push(parse_node(tokens).unwrap());
+						match parse_node(tokens) {
+							Some(n) => call.arguments.push(n),
+							None => break,
+						}
 					}
 				}
 			};
@@ -325,7 +333,7 @@ fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Option<ASTNode>
 				object: Box::new(ASTNode::Ident(ident.to_string())),
 				property: match tokens.pop().unwrap() {
 					Token::Ident(idt) => {
-						Box::new(parse_identifier(tokens, &idt).unwrap())
+						Box::new(parse_ident(tokens, &idt).unwrap())
 					},
 					_ => {
 						todo!();
@@ -335,6 +343,31 @@ fn parse_identifier(mut tokens: &mut Vec<Token>, ident: &str) -> Option<ASTNode>
 
 			Some(ASTNode::ProbAccess(prob))
 		},
+		Token::Arrow => {
+			println!("arrow");
+
+			tokens.pop();
+
+			let mut body = Vec::new();
+
+			match tokens.last().unwrap() {
+				Token::OpenBrace => {
+					body.extend(parse_block(tokens));
+				},
+				_ => {
+					body.push(parse_node(tokens).unwrap());
+				}
+			}
+
+			expect_token(tokens, Token::CloseParen);
+			
+			Some(ASTNode::FnDef(
+				FnDef { 
+					params: Vec::new(), 
+					body: body
+				}
+			))
+		}
 		_ => {
 			Some(ASTNode::Ident(ident.to_string()))
 		}
@@ -357,7 +390,7 @@ fn parse_func_def(tokens: &mut Vec<Token>) -> FnDef {
 				break;
 			},
 			Token::Ident(ident) => {
-				parse_identifier(tokens, &ident);
+				parse_ident(tokens, &ident);
 			},
 			_ => {
 				todo!()
@@ -575,6 +608,12 @@ fn parse_body_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 		
 					Some(ASTNode::Call(call))
 				},
+				Token::Dot => {
+					Some(ASTNode::ProbAccess(ProbAccess {
+						object: Box::new(ASTNode::Ident(ident.to_string())),
+						property: Box::new(parse_node(tokens).unwrap()),
+					}))
+				},
 				_ => {
 					todo!("Unexpected token: {:?}", next);
 				}
@@ -650,7 +689,7 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 		Token::Ident(ident) => {
 			println!("node is identifier: {:?}", ident);
 
-			parse_identifier(tokens, &ident)
+			parse_ident(tokens, &ident)
 		},
 		Token::String(str) => {
 			println!("LiteralString: {:?}", str);
@@ -711,6 +750,37 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 	}
 }
 
+fn parse_body(tokens: &mut Vec<Token>) -> Vec<ASTNode> {
+	println!("parse_body");
+
+	let mut nodes = Vec::new();
+
+	while let Some(token) = tokens.last() {
+		match token {
+			Token::CloseBrace => {
+				tokens.pop();
+				break;
+			},
+			_ => {
+				match parse_body_node(tokens) {
+					Some(n) => nodes.push(n),
+					None => break,
+				}
+			}
+		}
+	}
+
+	nodes
+}
+
+fn parse_block(tokens: &mut Vec<Token>) -> Vec<ASTNode> {
+	println!("parse_block");
+
+	expect_token(tokens, Token::OpenBrace);
+
+	parse_body(tokens)
+}
+
 pub fn parse_code(input: &str) -> Vec<ASTNode> {
 	let lexer = Token::lexer(input);
 	let mut tokens: Vec<Token> = lexer.collect();
@@ -718,18 +788,7 @@ pub fn parse_code(input: &str) -> Vec<ASTNode> {
 
 	println!("tokens: {:?}", tokens);
 
-	let mut ast = Vec::new();
-
-	while let Some(_) = tokens.last() {
-		let node = match parse_body_node(&mut tokens) {
-			Some(n) => n,
-			None => break,
-		};
-
-		ast.push(node);
-	}
-
-	ast
+	parse_body(&mut tokens)
 }
 
 #[cfg(test)]
@@ -875,5 +934,47 @@ mod tests {
 		for node in ast {
 			println!("{}", ast_pretty_string(&node));
 		}
+	}
+
+	#[test]
+	fn test_aa() {
+		let code = r#"
+			Div {
+				children: todos.map(todo => {})
+			}
+		"#;
+
+		let ast = parse_code(code);
+
+		for node in ast {
+			println!("{}", ast_pretty_string(&node));
+		}
+	}
+
+	#[test]
+	fn test_a2() {
+		let code = r#"
+			Window {
+				title: "Testi Ikkuna"
+				children: [
+					Div {
+						children: todos.map(todo => {
+							Div {
+								children: [
+									Text {
+										text: todo.name
+									}
+									Div {
+										children: []
+									}
+								]
+							}
+						})
+					}
+				]
+			}
+		"#;
+
+		parse_code(code);
 	}
 }
