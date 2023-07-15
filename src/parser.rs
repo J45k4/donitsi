@@ -174,6 +174,7 @@ pub enum ASTNode {
 }
 
 fn expect_token(tokens: &mut Vec<Token>, expected: Token) {
+	println!("expect_token: {:?}", expected);
 	let token = tokens.pop();
 	assert_eq!(token, Some(expected.clone()), "Expected {:?}, got {:?}", expected, token);
 }
@@ -201,7 +202,7 @@ fn eat_if(tokens: &mut Vec<Token>, expected: Token) -> bool {
 }
 
 fn parse_obj_probs(tokens: &mut Vec<Token>) -> Vec<Property> {
-	println!("parse_object_def_properties");
+	println!("parse obj probs start");
 
 	let mut properties = Vec::new();
 
@@ -232,7 +233,7 @@ fn parse_obj_probs(tokens: &mut Vec<Token>) -> Vec<Property> {
 		}
 	}
 
-	println!("parse_object_def_properties end");
+	println!("parse obj probs end");
 
 	properties
 }
@@ -316,11 +317,17 @@ fn parse_ident(mut tokens: &mut Vec<Token>, ident: &str) -> Option<ASTNode> {
 					_ => {
 						match parse_node(tokens) {
 							Some(n) => call.arguments.push(n),
-							None => break,
+							None => {
+								println!("next parsed node is none");
+								println!("next token: {:?}", tokens.last());
+								break;
+							},
 						}
 					}
 				}
 			};
+
+			println!("parsing call end");
 
 			Some(ASTNode::Call(call))
 		},
@@ -681,30 +688,36 @@ fn parse_body_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 }
 
 fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-	println!("parse_node");
+	let next = tokens.last().unwrap().clone();
 
-	let next = tokens.pop().unwrap();
+	println!("parse_node {:?}", next);
 
 	match next {
 		Token::Ident(ident) => {
+			tokens.pop();
 			println!("node is identifier: {:?}", ident);
-
 			parse_ident(tokens, &ident)
 		},
 		Token::String(str) => {
+			tokens.pop();
 			println!("LiteralString: {:?}", str);
-			Some(ASTNode::LiteralString(str))
+			Some(ASTNode::LiteralString(str.to_string()))
 		},
 		Token::Int(i) => {
+			tokens.pop();
 			println!("LiteralInt: {:?}", i);
 			Some(ASTNode::LiteralInt(i))
 		},
-		Token::Decimal(d) => Some(ASTNode::LiteralDecimal(d)),
+		Token::Decimal(d) => {
+			tokens.pop();
+			Some(ASTNode::LiteralDecimal(d))
+		},
 		Token::CloseBrace => {
 			None
 		},
 		Token::OpenBracket => {
-			println!("OpenBracket");
+			println!("parse array");
+			tokens.pop();
 
 			let mut items = Vec::new();
 
@@ -722,6 +735,7 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 						tokens.pop();
 					},
 					_ => {
+						println!("parse array item");
 						let node = parse_node(tokens).unwrap();
 						items.push(node);
 					}
@@ -732,14 +746,21 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 				items: items,
 			};
 
+			println!("parse array done");
+
 			Some(ASTNode::Array(array))
 		},
 		Token::OpenParen => {
+			tokens.pop();
 			Some(ASTNode::FnDef(parse_func_def(tokens)))
 		},
-		Token::Struct => Some(ASTNode::StructDef(parse_struct(tokens))),
+		Token::Struct => {
+			tokens.pop();
+			Some(ASTNode::StructDef(parse_struct(tokens)))
+		},
 		Token::CloseParen => None,
 		Token::OpenBrace => {
+			tokens.pop();
 			Some(ASTNode::Obj(Obj{
 				properties: parse_obj_probs(tokens),
 			}))
@@ -751,17 +772,21 @@ fn parse_node(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 }
 
 fn parse_body(tokens: &mut Vec<Token>) -> Vec<ASTNode> {
-	println!("parse_body");
+	println!("parse body");
 
 	let mut nodes = Vec::new();
 
 	while let Some(token) = tokens.last() {
 		match token {
 			Token::CloseBrace => {
+				println!("brace closed stop parsing body");
+
 				tokens.pop();
 				break;
 			},
 			_ => {
+				println!("parse body node");
+
 				match parse_body_node(tokens) {
 					Some(n) => nodes.push(n),
 					None => break,
@@ -769,6 +794,8 @@ fn parse_body(tokens: &mut Vec<Token>) -> Vec<ASTNode> {
 			}
 		}
 	}
+
+	println!("parsing body done");
 
 	nodes
 }
@@ -937,7 +964,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_aa() {
+	fn test_a1() {
 		let code = r#"
 			Div {
 				children: todos.map(todo => {})
@@ -954,27 +981,18 @@ mod tests {
 	#[test]
 	fn test_a2() {
 		let code = r#"
-			Window {
-				title: "Testi Ikkuna"
-				children: [
-					Div {
-						children: todos.map(todo => {
-							Div {
-								children: [
-									Text {
-										text: todo.name
-									}
-									Div {
-										children: []
-									}
-								]
-							}
-						})
-					}
-				]
-			}
+			a = [
+				Div {
+					children: todos.map(todo => {})
+				}
+			]
 		"#;
 
-		parse_code(code);
+		let ast = parse_code(code);
+		println!("ast: {:?}", ast);
+
+		for node in ast {
+			println!("{}", ast_pretty_string(&node));
+		}
 	}
 }
