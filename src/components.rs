@@ -25,9 +25,18 @@ pub struct Text {
     pub text: String,
 }
 
+#[derive(Clone, Debug)]
 pub struct Vertex {
-    pub position: [f32; 3],
-    pub color: [f32; 3],
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub color: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct Shape {
+    vertices: Vec<Vertex>,
+    indices: Vec<u32>,
 }
 
 

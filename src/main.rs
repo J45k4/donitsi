@@ -14,6 +14,7 @@ mod ui;
 mod pretty;
 mod donitsi;
 mod components;
+mod compiler;
 
 #[tokio::main]
 async fn main() {

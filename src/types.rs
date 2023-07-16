@@ -17,3 +17,19 @@ impl<T> Callback<T> {
 
     }
 }
+
+pub enum Action {
+    Construct{ id: usize },
+    Destruct{ id: usize },
+    LoadField{ id: usize, field: usize },
+    StoreField{ id: usize, field: usize, val: Value },
+    Call{ id: usize, args: Vec<Value> },
+    Import{ path: String },
+    Quit
+}
+
+#[derive(Debug)]
+pub struct Const {
+    pub id: usize,
+    pub value: Value,
+}

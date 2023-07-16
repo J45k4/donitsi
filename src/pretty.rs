@@ -1,4 +1,5 @@
 use crate::parser::ASTNode;
+use crate::vm::ByteCode;
 
 pub fn ast_pretty_string(node: &ASTNode) -> String {
     let mut s = String::new();
@@ -17,7 +18,7 @@ pub fn ast_pretty_string(node: &ASTNode) -> String {
                 s += format!("    Field: {}\n", field.name).as_str();
             }
         },
-        ASTNode::FnDef(fn_def) => {
+        ASTNode::Fun(fn_def) => {
             let body = if fn_def.body.len() == 0 {
                 "".to_string()
             } else if fn_def.body.len() < 1 {
@@ -66,7 +67,7 @@ pub fn ast_pretty_string(node: &ASTNode) -> String {
         },
         ASTNode::StructIns(obj) => {
             s += &format!("{} {{\n", obj.name);
-            for prob in &obj.properties {
+            for prob in &obj.probs {
                 s += &format!("  {}: {}\n", prob.name, ast_pretty_string(&prob.value));
             }
             s += "}}\n";
@@ -80,7 +81,7 @@ pub fn ast_pretty_string(node: &ASTNode) -> String {
             s += &format!("[{}]", array.items.iter().map(|p| format!("{}", ast_pretty_string(p))).collect::<Vec<String>>().join(", "));
         },
         ASTNode::Obj(obj) => {
-            s += &format!("{{{}}}", obj.properties.iter()
+            s += &format!("{{{}}}", obj.probs.iter()
                 .map(|p| format!("{}: {:?}", p.name, ast_pretty_string(&p.value)))
                 .collect::<Vec<String>>().join(", "))
         },
@@ -90,6 +91,16 @@ pub fn ast_pretty_string(node: &ASTNode) -> String {
         _ => {}
 
         
+    }
+
+    s
+}
+
+pub fn bytecode_to_str(bytecode: &[ByteCode]) -> String {
+    let mut s = String::new();
+
+    for (i, bc) in bytecode.iter().enumerate() {
+        s.push_str(&format!("{:04} {:?}\n", i, bc));
     }
 
     s
