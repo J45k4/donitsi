@@ -672,7 +672,7 @@ impl Parser {
 					self.skip(1);
 				},
 				_ => {
-					args.push(self.parse_expr());
+					args.push(self.parse_item().unwrap());
 				}
 			}
 		}
@@ -1172,6 +1172,36 @@ mod tests {
 					),
 					args: vec![
 						ASTNode::Int(1),
+					],
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
+	}
+
+	#[test]
+	fn test_call_with_callback() {
+		let code = r#"
+			foo(() => 5)
+		"#;
+
+		let ast = Parser::new(code)
+			.parse();
+
+		let expected = vec![
+			ASTNode::Call(
+				Call {
+					callee: Box::new(ASTNode::Ident("foo".to_string())),
+					args: vec![
+						ASTNode::Fun(
+							Fun {
+								params: vec![],
+								body: vec![
+									ASTNode::Int(5),
+								],
+							}
+						),
 					],
 				}
 			)

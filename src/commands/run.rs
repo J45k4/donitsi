@@ -26,7 +26,9 @@ pub fn run(args: RunArgs, log: usize) {
     let ast = Parser::new(&code).parse();
 
     if log >= 1 {
-        println!("{:?}", ast);
+        for node in &ast {
+            println!("{:?}", node);
+        }
     }
 
     let res = compiler.compile(&ast);
