@@ -53,13 +53,13 @@ pub fn ast_pretty_string(node: &ASTNode) -> String {
         ASTNode::Ident(ident) => {
             s += ident
         },
-        ASTNode::LiteralString(lit) => {
+        ASTNode::Str(lit) => {
             s += &format!(r#""{}""#, lit);
         },
-        ASTNode::LiteralInt(lit) => {
+        ASTNode::Int(lit) => {
             s += &lit.to_string()
         },
-        ASTNode::LiteralDecimal(lit) => {
+        ASTNode::Float(lit) => {
             s += format!("LiteralDecimal: {}\n", lit).as_str();
         },
         ASTNode::LiteralPercent(lit) => {

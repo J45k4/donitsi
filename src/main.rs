@@ -26,7 +26,7 @@ async fn main() {
 
     match args.command {
         Commands::Run(run_args) => {
-            commands::run(run_args);
+            commands::run(run_args, args.log);
         },
         Commands::Ast(ast_args) => {
             commands::ast(ast_args);

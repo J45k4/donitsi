@@ -8,7 +8,7 @@ use crate::pretty::bytecode_to_str;
 use crate::types::Action;
 use crate::vm::Vm;
 
-pub fn run(args: RunArgs) {
+pub fn run(args: RunArgs, log: usize) {
     // let code = std::fs::read_to_string(args.path).unwrap();
 
     // let ast = parse_code(&code);
@@ -24,6 +24,11 @@ pub fn run(args: RunArgs) {
     };
 
     let ast = Parser::new(&code).parse();
+
+    if log >= 1 {
+        println!("{:?}", ast);
+    }
+
     let res = compiler.compile(&ast);
 
     println!("consts: {:?}", res.consts);

@@ -176,9 +176,9 @@ pub enum ASTNode {
 	Array(Array),
 	Call(Call),
 	Property(String, Box<ASTNode>),
-	LiteralString(String),
-	LiteralInt(i64),
-	LiteralDecimal(f64),
+	Str(String),
+	Int(i64),
+	Float(f64),
 	LiteralPercent(f64),
 	Fun(Fun),
 	StructDef(StructDef),
@@ -200,6 +200,7 @@ pub struct Parser {
 	i: usize,
 	loglevel: usize,
 	callstack: Vec<String>,
+	input: String
 }
 
 impl Parser {
@@ -207,6 +208,7 @@ impl Parser {
 		let lexer = Token::lexer(input);
 
 		Parser {
+			input: input.to_string(),
 			i: 0,
 			loglevel: 0,
 			callstack: Vec::new(),
@@ -232,6 +234,16 @@ impl Parser {
 		match self.tokens.get(self.i + i) {
 			Some((token, _)) => Some(token.clone()),
 			None => None,
+		}
+	}
+
+	fn peek_unwrap(&self, i: usize) -> Token {
+		match self.peek(i) {
+			Some(token) => token,
+			None => {
+				println!("{}", self.curr_loc());
+				panic!("Unexpected end of input");
+			},
 		}
 	}
 
@@ -287,6 +299,40 @@ impl Parser {
 		println!("{} {}", self.callstack.join(":"), msg);
 	}
 
+	// Return the current location in the source code
+	// takes few lines of context from both sides
+	fn curr_loc(&self) -> String {
+		let mut start = self.i;
+		let mut end = self.i;
+
+		for _ in 0..3 {
+			if start > 0 {
+				start -= 1;
+			}
+		}
+
+		for _ in 0..3 {
+			if end < self.tokens.len() {
+				end += 1;
+			}
+		}
+
+		let min = if start > 0 {
+			self.tokens.get(start).unwrap().1.start
+		} else {
+			0
+		};
+		let max = if end < self.tokens.len() {
+			self.tokens.get(end).unwrap().1.end
+		} else {
+			self.input.len()
+		};
+
+		let text = self.input.get(min..max).unwrap();
+
+		text.to_string()
+	}
+
 	fn parse_block(&mut self) -> Vec<ASTNode> {
 		if self.loglevel > 0 {
 			self.callstack.push("parse_block".to_string());
@@ -323,10 +369,6 @@ impl Parser {
 				if self.loglevel > 0 {
 					self.log(&format!("ident: {}", ident));
 				}
-				// let next = match self.peek(2) {
-				// 	Some(token) => token,
-				// 	None => return Some(ASTNode::Ident(ident)),
-				// };
 
 				match self.peek(1) {
 					Some(Token::Assign) => {
@@ -354,6 +396,9 @@ impl Parser {
 					Some(Token::OpenBrace) => {
 						Some(self.parse_obj_ins())
 					},
+					Some(Token::Arrow) => {
+						Some(self.parse_fun())
+					},
 					_ => {
 						Some(self.parse_expr())
 					}
@@ -369,8 +414,11 @@ impl Parser {
 							self.skip(1);
 							break;
 						},
+						Token::Comma => {
+							self.skip(1);
+						},
 						_ => {
-							items.push(self.parse_expr());
+							items.push(self.parse_item().unwrap());
 						}
 					}
 				}
@@ -420,41 +468,73 @@ impl Parser {
 			self.callstack.push("parse_fun".to_string());
 		}
 
-		self.expect_eat(Token::OpenParen);
+		let next = match self.peek(0) {
+			Some(token) => token,
+			None => {
+				println!("{}", self.curr_loc());
+				panic!("Expected token but got None")
+			},
+		};
 
 		let mut params = Vec::new();
 
-		while let Some(token) = self.peek(0) {
-			match token {
-				Token::CloseParen => {
-					self.skip(1);
-					break;
-				},
-				Token::Comma => {
-					self.skip(1);
-				},
-				Token::Ident(name) => {
-					self.skip(1);
-					params.push(ASTNode::Ident(name));
-				},
-				_ => panic!("Expected ident or ) but got {:?}", self.peek(0)),
+		match next {
+			Token::OpenParen => {
+				self.skip(1);
+
+				while let Some(token) = self.peek(0) {
+					match token {
+						Token::CloseParen => {
+							self.skip(1);
+							break;
+						},
+						Token::Comma => {
+							self.skip(1);
+						},
+						Token::Ident(name) => {
+							self.skip(1);
+							params.push(ASTNode::Ident(name));
+						},
+						_ => panic!("Expected ident or ) but got {:?}", self.peek(0)),
+					}
+				}
+				
+			}
+			Token::Ident(idt) => {
+				self.skip(1);
+				params.push(ASTNode::Ident(idt));
+			}
+			_ => {
+				println!("{}", self.curr_loc());
+				panic!("Expected ( or ident but got {:?}", next);
 			}
 		}
 
 		self.expect_eat(Token::Arrow);
-		self.expect_eat(Token::OpenBrace);
+
+		let next = self.peek_unwrap(0);
 
 		let mut body = Vec::new();
 
-		while let Some(token) = self.peek(0) {
-			match token {
-				Token::CloseBrace => {
-					self.skip(1);
-					break;
-				},
-				_ => body.push(self.parse_item().unwrap()),
+		match next {
+			Token::OpenBrace => {
+				self.skip(1);
+				while let Some(token) = self.peek(0) {
+					match token {
+						Token::CloseBrace => {
+							self.skip(1);
+							break;
+						},
+						_ => body.push(self.parse_item().unwrap()),
+					}
+				}
+			},
+			_ => {
+				body.push(self.parse_item().unwrap());
 			}
 		}
+
+		// self.expect_eat(Token::OpenBrace);
 
 		let f = Fun {
 			params: params,
@@ -734,17 +814,17 @@ impl Parser {
 
 				ASTNode::Ident(ident.to_string())
 			}
-			Token::String(s) => ASTNode::LiteralString(s),
-			Token::Int(num) => ASTNode::LiteralInt(num),
-			Token::Decimal(num) => ASTNode::LiteralDecimal(num),
+			Token::String(s) => ASTNode::Str(s),
+			Token::Int(num) => ASTNode::Int(num),
+			Token::Decimal(num) => ASTNode::Float(num),
 			Token::OpenParen => {
 				let node = self.parse_expr();
 				
 				self.expect_eat(Token::CloseParen);
 				return node;
 			},
-
 			_ => {
+				println!("{}", self.curr_loc());
 				panic!("Unexpected token {:?}", next);
 			}
 		};
@@ -777,9 +857,9 @@ mod tests {
 					right: Box::new(
 						ASTNode::BinOp(
 							BinOp {
-								left: Box::new(ASTNode::LiteralInt(1)),
+								left: Box::new(ASTNode::Int(1)),
 								op: Op::Plus,
-								right: Box::new(ASTNode::LiteralInt(2)),
+								right: Box::new(ASTNode::Int(2)),
 							}
 						)
 					)
@@ -806,9 +886,9 @@ mod tests {
 					right: Box::new(
 						ASTNode::BinOp(
 							BinOp {
-								left: Box::new(ASTNode::LiteralInt(1)),
+								left: Box::new(ASTNode::Int(1)),
 								op: Op::Minus,
-								right: Box::new(ASTNode::LiteralInt(2)),
+								right: Box::new(ASTNode::Int(2)),
 							}
 						)
 					)
@@ -835,9 +915,9 @@ mod tests {
 					right: Box::new(
 						ASTNode::BinOp(
 							BinOp {
-								left: Box::new(ASTNode::LiteralInt(1)),
+								left: Box::new(ASTNode::Int(1)),
 								op: Op::Multiply,
-								right: Box::new(ASTNode::LiteralInt(2)),
+								right: Box::new(ASTNode::Int(2)),
 							}
 						)
 					)
@@ -864,9 +944,9 @@ mod tests {
 					right: Box::new(
 						ASTNode::BinOp(
 							BinOp {
-								left: Box::new(ASTNode::LiteralInt(1)),
+								left: Box::new(ASTNode::Int(1)),
 								op: Op::Divide,
-								right: Box::new(ASTNode::LiteralInt(2)),
+								right: Box::new(ASTNode::Int(2)),
 							}
 						)
 					)
@@ -896,14 +976,14 @@ mod tests {
 								left: Box::new(
 									ASTNode::BinOp(
 										BinOp {
-											left: Box::new(ASTNode::LiteralInt(1)),
+											left: Box::new(ASTNode::Int(1)),
 											op: Op::Plus,
-											right: Box::new(ASTNode::LiteralInt(2)),
+											right: Box::new(ASTNode::Int(2)),
 										}
 									)
 								),
 								op: Op::Multiply,
-								right: Box::new(ASTNode::LiteralInt(3)),
+								right: Box::new(ASTNode::Int(3)),
 							}
 						)
 					)
@@ -930,14 +1010,14 @@ mod tests {
 					right: Box::new(
 						ASTNode::BinOp(
 							BinOp {
-								left: Box::new(ASTNode::LiteralInt(1)),
+								left: Box::new(ASTNode::Int(1)),
 								op: Op::Plus,
 								right: Box::new(
 									ASTNode::BinOp(
 										BinOp {
-											left: Box::new(ASTNode::LiteralInt(2)),
+											left: Box::new(ASTNode::Int(2)),
 											op: Op::Multiply,
-											right: Box::new(ASTNode::LiteralInt(3)),
+											right: Box::new(ASTNode::Int(3)),
 										}
 									)
 								),
@@ -997,7 +1077,7 @@ mod tests {
 							Call {
 								callee: Box::new(ASTNode::Ident("foo".to_string())),
 								args: vec![
-									ASTNode::LiteralInt(1),
+									ASTNode::Int(1),
 								],
 							}
 						)
@@ -1030,13 +1110,13 @@ mod tests {
 										Call {
 											callee: Box::new(ASTNode::Ident("foo".to_string())),
 											args: vec![
-												ASTNode::LiteralInt(1),
+												ASTNode::Int(1),
 											],
 										}
 									)
 								),
 								args: vec![
-									ASTNode::LiteralInt(2),
+									ASTNode::Int(2),
 								],
 							}
 
@@ -1091,7 +1171,7 @@ mod tests {
 						)
 					),
 					args: vec![
-						ASTNode::LiteralInt(1),
+						ASTNode::Int(1),
 					],
 				}
 			)
@@ -1117,6 +1197,37 @@ mod tests {
 						ASTNode::Array(
 							Array {
 								items: vec![],
+							}
+						)
+					),
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
+	}
+
+	#[test]
+	fn test_array_with_many_numbers() {
+		let code = r#"
+			l = [1, 2, 3]
+		"#;
+
+		let ast = Parser::new(code)
+			.parse();
+
+		let expected = vec![
+			ASTNode::Assign(
+				Assign {
+					left: Box::new(ASTNode::Ident("l".to_string())),
+					right: Box::new(
+						ASTNode::Array(
+							Array {
+								items: vec![
+									ASTNode::Int(1),
+									ASTNode::Int(2),
+									ASTNode::Int(3),
+								],
 							}
 						)
 					),
@@ -1168,15 +1279,15 @@ mod tests {
 					probs: vec![
 						Property {
 							name: "x".to_string(),
-							value: Box::new(ASTNode::LiteralInt(1)),
+							value: Box::new(ASTNode::Int(1)),
 						},
 						Property {
 							name: "y".to_string(),
-							value: Box::new(ASTNode::LiteralInt(2)),
+							value: Box::new(ASTNode::Int(2)),
 						},
 						Property {
 							name: "name".to_string(),
-							value: Box::new(ASTNode::LiteralString("nakki".to_string())),
+							value: Box::new(ASTNode::Str("nakki".to_string())),
 						},
 					],
 				}
@@ -1291,6 +1402,84 @@ mod tests {
 	}
 
 	#[test]
+	fn test_fun_without_paren() {
+		let code = r#"
+			foo = a => {
+				a + 1
+			}
+		"#;
+
+		let ast = Parser::new(code)
+			.parse();
+
+		let expected = vec![
+			ASTNode::Assign(
+				Assign {
+					left: Box::new(ASTNode::Ident("foo".to_string())),
+					right: Box::new(
+						ASTNode::Fun(
+							Fun {
+								params: vec![
+									ASTNode::Ident("a".to_string()),
+								],
+								body: vec![
+									ASTNode::BinOp(
+										BinOp {
+											op: Op::Plus,
+											left: Box::new(ASTNode::Ident("a".to_string())),
+											right: Box::new(ASTNode::Int(1)),
+										}
+									)
+								],
+							}
+						)
+					),
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
+	}
+
+	#[test]
+	fn test_fun_without_block() {
+		let code = r#"
+			foo = a => a + 1
+		"#;
+
+		let ast = Parser::new(code)
+			.parse();
+
+		let expected = vec![
+			ASTNode::Assign(
+				Assign {
+					left: Box::new(ASTNode::Ident("foo".to_string())),
+					right: Box::new(
+						ASTNode::Fun(
+							Fun {
+								params: vec![
+									ASTNode::Ident("a".to_string()),
+								],
+								body: vec![
+									ASTNode::BinOp(
+										BinOp {
+											op: Op::Plus,
+											left: Box::new(ASTNode::Ident("a".to_string())),
+											right: Box::new(ASTNode::Int(1)),
+										}
+									)
+								],
+							}
+						)
+					),
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
+	}
+
+	#[test]
 	fn test_return_expr() {
 		let code = r#"
 			return 1 + 5
@@ -1307,8 +1496,8 @@ mod tests {
 							ASTNode::BinOp(
 								BinOp {
 									op: Op::Plus,
-									left: Box::new(ASTNode::LiteralInt(1)),
-									right: Box::new(ASTNode::LiteralInt(5)),
+									left: Box::new(ASTNode::Int(1)),
+									right: Box::new(ASTNode::Int(5)),
 								}
 							)
 						)
@@ -1333,6 +1522,69 @@ mod tests {
 			ASTNode::Ret(
 				Ret {
 					value: Box::new(None),
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
+	}
+
+	#[test]
+	fn test_parse_obj_instance_in_array() {
+		let code = r#"
+			[
+				Div { }
+			]
+		"#;
+
+		let ast = Parser::new(code)
+			.parse();
+
+		let expected = vec![
+			ASTNode::Array(
+				Array {
+					items: vec![
+						ASTNode::StructIns(
+							StructIns {
+								name: "Div".to_string(),
+								probs: vec![],
+							}
+						)
+					],
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
+	}
+
+	#[test]
+	fn test_parse_vertex() {
+		let code = r#"
+			Vertex { x: -0.6, y: 0.1, color: "black" }
+		"#;
+
+		let ast = Parser::new(code)
+			.parse();
+
+		let expected = vec![
+			ASTNode::StructIns(
+				StructIns {
+					name: "Vertex".to_string(),
+					probs: vec![
+						Property {
+							name: "x".to_string(),
+							value: Box::new(ASTNode::Float(-0.6)),
+						},
+						Property {
+							name: "y".to_string(),
+							value: Box::new(ASTNode::Float(0.1)),
+						},
+						Property {
+							name: "color".to_string(),
+							value: Box::new(ASTNode::Str("black".to_string())),
+						},
+					],
 				}
 			)
 		];

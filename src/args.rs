@@ -6,6 +6,8 @@ use clap::Subcommand;
 pub struct Args {
     #[clap(subcommand)]
     pub command: Commands,
+    #[clap(short, long, default_value = "0")]
+    pub log: usize
 }
 
 #[derive(Debug, Subcommand)]

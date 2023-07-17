@@ -70,9 +70,9 @@ impl Compiler {
             ASTNode::TypeDef(_) => { /* We are going to ignore types in compiler for now */},
             ASTNode::Property(_, _) => todo!(),
             ASTNode::StructIns(obj) => todo!(),
-            ASTNode::LiteralString(lit) => res.bytecode.push(ByteCode::LoadStrLit(self.get_str(&lit))),
-            ASTNode::LiteralInt(lit) => res.bytecode.push(ByteCode::LoadIntLit(*lit as usize)),
-            ASTNode::LiteralDecimal(lit) => res.bytecode.push(ByteCode::LoadDecLit(*lit)),
+            ASTNode::Str(lit) => res.bytecode.push(ByteCode::LoadStrLit(self.get_str(&lit))),
+            ASTNode::Int(lit) => res.bytecode.push(ByteCode::LoadIntLit(*lit as usize)),
+            ASTNode::Float(lit) => res.bytecode.push(ByteCode::LoadDecLit(*lit)),
             ASTNode::LiteralPercent(_) => todo!(),
             ASTNode::Fun(def) => {
                 for p in &def.params {
