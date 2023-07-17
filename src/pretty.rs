@@ -85,9 +85,16 @@ pub fn ast_pretty_string(node: &ASTNode) -> String {
                 .map(|p| format!("{}: {:?}", p.name, ast_pretty_string(&p.value)))
                 .collect::<Vec<String>>().join(", "))
         },
-        ASTNode::Ret(ret) => {
-            s += &format!("return {{{}}}", ast_pretty_string(&ret));
-        },
+        // ASTNode::Ret(ret) => {
+        //     match ret.value.clone() {
+        //         Some(value) => {
+        //             s += &format!("return {}", ast_pretty_string(&value));
+        //         },
+        //         None => {
+        //             s += "return";
+        //         }
+        //     }
+        // },
         _ => {}
 
         

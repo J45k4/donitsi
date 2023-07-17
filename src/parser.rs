@@ -50,7 +50,7 @@ enum Token {
 	#[token("String")]
 	StringDef,
 	#[token("return")]
-	Return,
+	Ret,
 	#[token("+")]
 	Plus,
 	#[token("-")]
@@ -186,380 +186,14 @@ pub enum ASTNode {
 	Var(Var),
 	ProbAccess(ProbAccess),
 	Obj(Obj),
-	Ret(Box<ASTNode>),
+	Ret(Ret),
 	BinOp(BinOp)
 }
 
-fn expect_token(tokens: &mut Vec<Token>, expected: Token) {
-	println!("expect_token: {:?}", expected);
-	let token = tokens.pop();
-	assert_eq!(token, Some(expected.clone()), "Expected {:?}, got {:?}", expected, token);
+#[derive(Debug, PartialEq, Clone)]
+pub struct Ret {
+	pub value: Box<Option<ASTNode>>
 }
-
-fn expect_identifier(tokens: &mut Vec<Token>) -> String {
-	let token = tokens.pop();
-	match token {
-		Some(Token::Ident(ident)) => ident,
-		_ => panic!("Expected identifier, got {:?}", token)
-	}
-}
-
-fn eat_if(tokens: &mut Vec<Token>, expected: Token) -> bool {
-	match tokens.last() {
-		Some(t) => {
-			if t == &expected {
-				tokens.pop();
-				true
-			} else {
-				false
-			}
-		},
-		None => false
-	}
-}
-
-// fn parse_obj_probs(tokens: &mut Vec<Token>) -> Vec<Property> {
-// 	println!("parse obj probs start");
-
-// 	let mut properties = Vec::new();
-
-// 	while let Some(token) = tokens.pop() {
-// 		println!("object token {:?}", token);
-
-// 		match token {
-// 			Token::CloseBrace => {
-// 				break;
-// 			},
-// 			Token::Ident(ident) => {
-// 				println!("object property ident: {}", ident);
-
-// 				expect_token(tokens, Token::Colon);
-// 				let value = parse_node(tokens).unwrap();
-// 				let prop = Property { 
-// 					name: ident,
-// 					value: Box::new(value) 
-// 				};
-// 				properties.push(prop);
-// 			},
-// 			Token::Comma => {
-// 				continue;
-// 			},
-// 			_ => {
-// 				panic!("Unexpected token while parsing object definition properties: {:?}", token)
-// 			}
-// 		}
-// 	}
-
-// 	println!("parse obj probs end");
-
-// 	properties
-// }
-
-// fn parse_list(tokens: &mut Vec<Token>) -> Vec<ASTNode> {
-// 	println!("parse_list");
-
-// 	let mut list = Vec::new();
-
-// 	while let Some(token) = tokens.pop() {
-// 		println!("list token {:?}", token);
-
-// 		match token {
-// 			Token::CloseBracket => {
-// 				break;
-// 			},
-// 			_ => {
-// 				let node = parse_node(tokens).unwrap();
-// 				list.push(node);
-// 			}
-// 		}
-// 	}
-
-// 	list
-// }
-
-// fn parse_ident(mut tokens: &mut Vec<Token>, ident: &str) -> Option<ASTNode> {
-// 	println!("parse_ident: {:?}", ident);
-
-// 	let next = tokens.last().unwrap().clone();
-
-// 	match next {
-// 		Token::OpenBrace => {
-// 			tokens.pop();
-
-// 			let props: Vec<Property> = parse_obj_probs(&mut tokens);
-		
-// 			Some(ASTNode::StructIns(
-// 				StructIns {
-// 					name: ident.to_string(),
-// 					properties: props,
-// 				}
-// 			))
-// 		},
-// 		Token::Assign => {
-// 			tokens.pop();
-
-// 			println!("parsing assignment: {}", ident);
-
-// 			let left = ASTNode::Ident(ident.to_string());
-// 			let right = parse_node(&mut tokens).unwrap();
-
-// 			let node: ASTNode = ASTNode::Assign(
-// 				Assign {
-// 					left: Box::new(left),
-// 					right: Box::new(right),
-// 				}
-// 			);
-
-// 			Some(node)
-// 		},
-// 		Token::OpenParen => {
-// 			tokens.pop();
-
-// 			println!("parsing call: {}", ident);
-
-// 			let mut call = Call {
-// 				callee: Box::new(ASTNode::Ident(ident.to_string())),
-// 				arguments: Vec::new(),
-// 			};
-
-// 			while let Some(next) = tokens.last() {
-// 				match next {
-// 					Token::CloseParen => {
-// 						tokens.pop();
-// 						break;
-// 					},
-// 					Token::Comma => {
-// 						tokens.pop();
-// 					},
-// 					_ => {
-// 						match parse_node(tokens) {
-// 							Some(n) => call.arguments.push(n),
-// 							None => {
-// 								println!("next parsed node is none");
-// 								println!("next token: {:?}", tokens.last());
-// 								break;
-// 							},
-// 						}
-// 					}
-// 				}
-// 			};
-
-// 			println!("parsing call end");
-
-// 			Some(ASTNode::Call(call))
-// 		},
-// 		Token::Dot => {
-// 			tokens.pop();
-
-// 			println!("prob access");
-
-// 			let prob = ProbAccess {
-// 				object: Box::new(ASTNode::Ident(ident.to_string())),
-// 				property: match tokens.pop().unwrap() {
-// 					Token::Ident(idt) => {
-// 						Box::new(parse_ident(tokens, &idt).unwrap())
-// 					},
-// 					_ => {
-// 						todo!();
-// 					}
-// 				},
-// 			};
-
-// 			Some(ASTNode::ProbAccess(prob))
-// 		},
-// 		Token::Arrow => {
-// 			println!("arrow");
-
-// 			tokens.pop();
-
-// 			let mut body = Vec::new();
-
-// 			match tokens.last().unwrap() {
-// 				Token::OpenBrace => {
-// 					body.extend(parse_block(tokens));
-// 				},
-// 				_ => {
-// 					body.push(parse_node(tokens).unwrap());
-// 				}
-// 			}
-
-// 			expect_token(tokens, Token::CloseParen);
-			
-// 			Some(ASTNode::FnDef(
-// 				FnDef { 
-// 					params: Vec::new(), 
-// 					body: body
-// 				}
-// 			))
-// 		}
-// 		_ => {
-// 			Some(ASTNode::Ident(ident.to_string()))
-// 		}
-// 	}
-// }
-
-// fn parse_func_def(tokens: &mut Vec<Token>) -> FnDef {
-// 	println!("parse_func_def");
-
-// 	let mut fn_def = FnDef {
-// 		params: Vec::new(),
-// 		body: Vec::new(),
-// 	};
-
-// 	while let Some(token) = tokens.pop() {
-// 		println!("token: {:?}", token);
-
-// 		match token {
-// 			Token::CloseParen => {
-// 				break;
-// 			},
-// 			Token::Ident(ident) => {
-// 				parse_ident(tokens, &ident);
-// 			},
-// 			_ => {
-// 				todo!()
-// 			}
-// 		};
-// 	};
-
-// 	expect_token(tokens, Token::Arrow);
-
-// 	// let next = tokens.pop().unwrap();
-
-// 	// println!("next: {:?}", next);
-
-// 	let mut braced = false;
-// 	while let Some(next) = tokens.last() {
-// 		match next {
-// 			Token::OpenBrace => {
-// 				tokens.pop();
-// 				braced = true;
-// 			},
-// 			Token::CloseBrace => {
-// 				tokens.pop();
-// 				break;
-// 			},
-// 			_ => {
-// 				let n = match parse_body_node(tokens) {
-// 					Some(n) => n,
-// 					None => break,
-// 				};
-
-// 				fn_def.body.push(n);
-
-// 				if !braced {
-// 					println!("breaking since not braced");
-
-// 					break;
-// 				}
-// 			}
-// 		};
-// 	};
-
-// 	println!("parsing fn def finished");
-
-// 	fn_def
-	
-// 	// match next {
-// 	// 	Token::Arrow => {
-// 	// 		let next = tokens.pop().unwrap();
-
-// 	// 		match next {
-// 	// 			Token::OpenBrace => {
-// 	// 				//let props: Vec<Property> = parse_object_def_properties(&mut tokens);
-
-// 	// 				let mut fdef = FunctionDef {
-// 	// 					params: Vec::new(),
-// 	// 					body: Vec::new(),
-// 	// 				};
-
-// 	// 				while let Some(token) = tokens.pop() {
-// 	// 					let node = match token {
-// 	// 						Token::Identifier(ident) => {
-// 	// 							parse_identifier(tokens, &ident)
-// 	// 						},
-// 	// 						Token::CloseBrace => {
-// 	// 							break;
-// 	// 						},
-// 	// 						_ => {
-// 	// 							todo!("Unexpected token: {:?}", token);
-// 	// 						}
-// 	// 					};
-
-// 	// 					fdef.body.push(node);
-// 	// 				}
-
-// 	// 				Node::FunctionDef(fdef)
-// 	// 			},
-// 	// 			_ => {
-// 	// 				todo!();
-// 	// 			}
-// 	// 		}
-// 	// 	},
-// 	// 	_ => {
-// 	// 		todo!();
-// 	// 	}
-// 	// }
-// }
-
-// fn parse_struct(tokens: &mut Vec<Token>) -> StructDef {
-// 	println!("Struct");
-
-// 	let token = tokens.pop().unwrap();
-
-// 	let name = match token {
-// 		Token::Ident(ident) => {
-// 			ident
-// 		},
-// 		_ => {
-// 			todo!();
-// 		}
-// 	};
-
-// 	expect_token(tokens, Token::OpenBrace);
-
-// 	let mut struct_def = StructDef {
-// 		name: name,
-// 		fields: Vec::new(),
-// 	};
-
-// 	while let Some(token) = tokens.pop() {
-// 		match token {
-// 			Token::CloseBrace => {
-// 				break;
-// 			},
-// 			Token::Ident(ident) => {
-// 				println!("Identifier: {}", ident);
-
-// 				expect_token(tokens, Token::Colon);
-
-// 				let typ = match tokens.pop().unwrap() {
-// 					Token::IntDef => VarType::Int,
-// 					Token::FloatDef => VarType::Float,
-// 					Token::StringDef => VarType::String,
-// 					Token::Ident(ident) => VarType::Var(ident),
-// 					Token::String(str) => VarType::StrLit(str),
-// 					Token::OpenParen => VarType::FnDef(parse_func_def(tokens)),
-// 					_ => {
-// 						todo!();
-// 					}
-// 				};
-
-// 				let field = TypeField {
-// 					name: ident,
-// 					typ: typ,
-// 				};
-
-// 				struct_def.fields.push(field);
-// 			},
-// 			_ => {
-// 				todo!();
-// 			}
-// 		}
-// 	}
-
-// 	struct_def
-// }
 
 pub struct Parser {
 	tokens: Vec<(Token, Span)>,
@@ -579,17 +213,6 @@ impl Parser {
 			tokens: lexer.spanned().map(|(token, span)| (token, span.into())).collect()
 		}
 	}
-
-	// pub fn parse(&mut self) -> Vec<ASTNode> {
-	// 	let lexer = Token::lexer(input);
-	// 	let mut tokens: Vec<Token> = lexer.collect();
-	// 	let tokens_with_spans: Vec<(Token, Span)> = lexer.spanned().map(|(token, span)| (token, span.into())).collect();
-	// 	tokens.reverse();
-	
-	// 	println!("tokens: {:?}", tokens);
-	
-	// 	self.parse_block(&mut tokens)
-	// }
 
 	pub fn set_loglevel(mut self, level: usize) -> Self {
 		self.loglevel = level;
@@ -709,60 +332,9 @@ impl Parser {
 					Some(Token::Assign) => {
 						self.skip(2);
 
-						let right = match self.peek(0) {
-							Some(token) => match token {
-								Token::OpenParen => {
-									self.skip(1);
-
-									let mut params = Vec::new();
-
-									while let Some(token) = self.peek(0) {
-										match token {
-											Token::CloseParen => {
-												self.skip(1);
-												break;
-											},
-											Token::Comma => {
-												self.skip(1);
-											},
-											Token::Ident(name) => {
-												self.skip(1);
-												params.push(ASTNode::Ident(name));
-											},
-											_ => panic!("Expected ident or ) but got {:?}", self.peek(0)),
-										}
-									}
-
-									self.expect_eat(Token::Arrow);
-									self.expect_eat(Token::OpenBrace);
-
-									let mut body = Vec::new();
-
-									while let Some(token) = self.peek(0) {
-										match token {
-											Token::CloseBrace => {
-												self.skip(1);
-												break;
-											},
-											_ => body.push(self.parse_item().unwrap()),
-										}
-									}
-
-									let f = Fun {
-										params: params,
-										body: body,
-									};
-
-									ASTNode::Fun(f)
-								},
-								_ => self.parse_item().unwrap(),
-							},
-							None => panic!("Expected expression after assignment")
-						};
-
 						let a = Assign { 
 							left: Box::new(ASTNode::Ident(ident.clone())), 
-							right: Box::new(right)
+							right: Box::new(self.parse_item().unwrap())
 						};
 
 
@@ -806,6 +378,8 @@ impl Parser {
 				Some(ASTNode::Array(Array { items }))
 			}
 			Token::OpenParen => {
+				// In here we check if future tokens contain an close paren and an arrow
+				// If so, we parse a function, otherwise we parse an expression
 				let mut i = 1;
 
 				while let Some(token) = self.peek(i) {
@@ -823,6 +397,13 @@ impl Parser {
 					}
 					_ => self.parse_expr()
 				})
+			}
+			Token::Ret => {
+				self.skip(1);
+				
+				Some(ASTNode::Ret(Ret {
+					value: Box::new(self.parse_item()),
+				}))
 			}
 			_ => Some(self.parse_expr())
 		};
@@ -949,7 +530,9 @@ impl Parser {
 
 		let ret = match next {
 			Token::Plus => {
-				self.log("Plus");
+				if self.loglevel > 0 {
+					self.log("Plus");
+				}
 				self.skip(1);
 				ASTNode::BinOp(
 					BinOp { 
@@ -960,7 +543,9 @@ impl Parser {
 				)
 			},
 			Token::Minus => {
-				self.log("Minus");
+				if self.loglevel > 0 {
+					self.log("Minus");
+				}
 				self.skip(1);
 				ASTNode::BinOp(
 					BinOp { 
@@ -971,11 +556,9 @@ impl Parser {
 				)
 			},
 			Token::OpenParen => {
-				self.log("parsing call");
 				self.parse_call(left)
 			},
 			Token::Dot => {
-				self.log("parsing dot");
 				self.parse_prob_access(left)
 			},
 			_ => {
@@ -991,6 +574,10 @@ impl Parser {
 	}
 
 	fn parse_call(&mut self, caller: ASTNode) -> ASTNode {
+		if self.loglevel > 0 {
+			self.callstack.push("parse_call".to_string());
+		}
+
 		self.skip(1);
 
 		let mut args = Vec::new();
@@ -1010,7 +597,9 @@ impl Parser {
 			}
 		}
 
-		self.log("call done");
+		if self.loglevel > 0 {
+			self.log("call done");
+		}
 
 		let call = ASTNode::Call(
 			Call {
@@ -1019,7 +608,7 @@ impl Parser {
 			}
 		);
 
-		match self.peek(0) {
+		let ret = match self.peek(0) {
 			Some(t) => match t {
 				Token::OpenParen => {
 					self.parse_call(call)
@@ -1027,10 +616,20 @@ impl Parser {
 				_ => call,
 			},
 			None => call,
+		};
+
+		if self.loglevel > 0 {
+			self.callstack.pop();
 		}
+
+		ret
 	}
 
 	fn parse_prob_access(&mut self, left: ASTNode) -> ASTNode {
+		if self.loglevel > 0 {
+			self.callstack.push("parse_prob_access".to_string());
+		}
+
 		self.skip(1);
 
 		let ident = self.expect_ident();
@@ -1042,7 +641,7 @@ impl Parser {
 			}
 		);
 
-		match self.peek(0) {
+		let ret = match self.peek(0) {
 			Some(t) => match t {
 				Token::OpenParen => {
 					self.parse_call(prob_access)
@@ -1050,7 +649,13 @@ impl Parser {
 				_ => prob_access,
 			},
 			None => prob_access,
+		};
+
+		if self.loglevel > 0 {
+			self.callstack.pop();
 		}
+
+		ret
 	}
 
 	fn parse_term(&mut self) -> ASTNode {
@@ -1072,7 +677,9 @@ impl Parser {
 
 		let ret = match next {
 			Token::Multiply => {
-				self.log("Multiply");
+				if self.loglevel > 0 {
+					self.log("Multiply");
+				}
 				self.skip(1);
 				ASTNode::BinOp(
 					BinOp { 
@@ -1083,7 +690,9 @@ impl Parser {
 				)
 			},
 			Token::Divide => {
-				self.log("Divide");
+				if self.loglevel > 0 {
+					self.log("Divide");
+				}
 				self.skip(1);
 				ASTNode::BinOp(
 					BinOp { 
@@ -1124,24 +733,6 @@ impl Parser {
 				}
 
 				ASTNode::Ident(ident.to_string())
-
-				// let token = match self.peek(0) {
-				// 	Some(t) => t,
-				// 	None => {
-				// 		return ASTNode::Ident(ident.to_string());
-				// 	}
-				// };
-
-				// match token {
-				// 	Token::OpenParen => {
-				// 		Call {
-				// 			callee: ident.to_string(),
-				// 		}
-				// 	},
-				// 	_ => {
-				// 		return ASTNode::Ident(ident.to_string());
-				// 	}
-				// }
 			}
 			Token::String(s) => ASTNode::LiteralString(s),
 			Token::Int(num) => ASTNode::LiteralInt(num),
@@ -1170,179 +761,6 @@ impl Parser {
 mod tests {
     use super::*;
 
-    // #[test]
-    // fn it_works() {
-    //     let code = r#"Main {
-    //         children: Window {
-    //             title: "Testi Ikkuna"
-    //             children: [
-    //                 Box {
-    //                     onClick: () => {
-    //                         info("Hello world")
-    //                         info("Hello world")
-    //                         info("Hello world")
-    //                         info("Hello world")
-    //                     }
-    //                     children: [
-    //                         Text {
-    //                             title: "qwerty"
-    //                         }
-    //                     ]
-    //                 }
-    //             ]
-    //         }
-    //     }"#;
-
-    //     parse_code(code);
-    // }
-
-    // #[test]
-    // fn test_parse_struct() {
-    //     let code = r#"
-    //         struct Person {
-    //             name: "Testi"
-    //             age: Int
-
-    //             say_hello: () => {
-    //                 info("Hello world")
-    //             }
-    //         }
-    //     "#;
-
-    //     parse_code(code);
-    // }
-
-	// #[test]
-	// fn test_parse_import() {
-
-	// }
-
-	// #[test]
-	// fn parse_two_list_assigments() {
-	// 	let code = r#"
-	// 		a = [1, 2, 3]
-	// 		b = [3, 2, 1]
-	// 	"#;
-
-	// 	let ast = parse_code(code);
-
-	// 	println!("ast: {:?}", ast);
-
-	// 	for node in ast {
-	// 		println!("{}", ast_pretty_string(&node));
-	// 	}
-	// }
-
-	// #[test]
-	// fn parse_object_assigment() {
-	// 	let code = r#"
-	// 		a = {
-	// 			name: "Testi"
-	// 			age: 123
-	// 		}
-	// 	"#;
-
-	// 	let ast = parse_code(code);
-
-	// 	println!("ast: {:?}", ast);
-
-	// 	for node in ast {
-	// 		println!("{}", ast_pretty_string(&node));
-	// 	}
-	// }
-
-	// #[test]
-	// fn parse_var() {
-	// 	let code = r#"TodoItem todo_item = {}"#;
-
-	// 	let ast = parse_code(code);
-
-	// 	println!("ast: {:?}", ast);
-
-	// 	for node in ast {
-	// 		println!("{}", ast_pretty_string(&node));
-	// 	}
-	// }
-	
-	// #[test]
-	// fn parse_nested_instances() {
-	// 	let code = r#"
-	// 		Window {
-	// 			title: "test"
-	// 			children: [
-	// 				Box {
-	// 					onClick: () => {
-	// 						info("Hello world")
-	// 					}
-	// 					children: [
-	// 						Text {
-	// 							title: "qwerty"
-	// 						}
-	// 					]
-	// 				}
-	// 			]
-	// 		}
-	// 	"#;
-
-	// 	let ast = parse_code(code);
-
-	// 	println!("ast: {:?}", ast);
-
-	// 	for node in ast {
-	// 		println!("{}", ast_pretty_string(&node));
-	// 	}
-	// }
-
-	// #[test]
-	// fn test_parse_fn_without_params() {
-	// 	let code = r#"
-	// 		foo = () => {
-	// 			return "Hello world"
-	// 		}
-	// 	"#;
-
-	// 	let ast = parse_code(code);
-
-	// 	println!("ast: {:?}", ast);
-
-	// 	for node in ast {
-	// 		println!("{}", ast_pretty_string(&node));
-	// 	}
-	// }
-
-	// #[test]
-	// fn test_a1() {
-	// 	let code = r#"
-	// 		Div {
-	// 			children: todos.map(todo => {})
-	// 		}
-	// 	"#;
-
-	// 	let ast = parse_code(code);
-
-	// 	for node in ast {
-	// 		println!("{}", ast_pretty_string(&node));
-	// 	}
-	// }
-
-	// #[test]
-	// fn test_a2() {
-	// 	let code = r#"
-	// 		a = [
-	// 			Div {
-	// 				children: todos.map(todo => {})
-	// 			}
-	// 		]
-	// 	"#;
-
-	// 	let ast = parse_code(code);
-	// 	println!("ast: {:?}", ast);
-
-	// 	for node in ast {
-	// 		println!("{}", ast_pretty_string(&node));
-	// 	}
-	// }
-
 	#[test]
 	fn test_simple_plus_expr() {
 		let code = r#"
@@ -1352,7 +770,24 @@ mod tests {
 		let ast = Parser::new(code)
 			.parse();
 
-		println!("ast: {:?}", ast);
+		let expected = vec![
+			ASTNode::Assign(
+				Assign {
+					left: Box::new(ASTNode::Ident("a".to_string())),
+					right: Box::new(
+						ASTNode::BinOp(
+							BinOp {
+								left: Box::new(ASTNode::LiteralInt(1)),
+								op: Op::Plus,
+								right: Box::new(ASTNode::LiteralInt(2)),
+							}
+						)
+					)
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
 	}
 
 	#[test]
@@ -1364,7 +799,24 @@ mod tests {
 		let ast = Parser::new(code)
 			.parse();
 
-		println!("ast: {:?}", ast);
+		let expected = vec![
+			ASTNode::Assign(
+				Assign {
+					left: Box::new(ASTNode::Ident("a".to_string())),
+					right: Box::new(
+						ASTNode::BinOp(
+							BinOp {
+								left: Box::new(ASTNode::LiteralInt(1)),
+								op: Op::Minus,
+								right: Box::new(ASTNode::LiteralInt(2)),
+							}
+						)
+					)
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
 	}
 
 	#[test]
@@ -1374,10 +826,26 @@ mod tests {
 		"#;
 
 		let ast = Parser::new(code)
-			.set_loglevel(1)
 			.parse();
 
-		println!("ast: {:?}", ast);
+		let expected = vec![
+			ASTNode::Assign(
+				Assign {
+					left: Box::new(ASTNode::Ident("a".to_string())),
+					right: Box::new(
+						ASTNode::BinOp(
+							BinOp {
+								left: Box::new(ASTNode::LiteralInt(1)),
+								op: Op::Multiply,
+								right: Box::new(ASTNode::LiteralInt(2)),
+							}
+						)
+					)
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
 	}
 
 	#[test]
@@ -1387,10 +855,26 @@ mod tests {
 		"#;
 
 		let ast = Parser::new(code)
-			.set_loglevel(1)
 			.parse();
 
-		println!("ast: {:?}", ast);
+		let expected = vec![
+			ASTNode::Assign(
+				Assign {
+					left: Box::new(ASTNode::Ident("a".to_string())),
+					right: Box::new(
+						ASTNode::BinOp(
+							BinOp {
+								left: Box::new(ASTNode::LiteralInt(1)),
+								op: Op::Divide,
+								right: Box::new(ASTNode::LiteralInt(2)),
+							}
+						)
+					)
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
 	}
 
 	#[test]
@@ -1402,7 +886,32 @@ mod tests {
 		let ast = Parser::new(code)
 			.parse();
 
-		println!("ast: {:?}", ast);
+		let expected = vec![
+			ASTNode::Assign(
+				Assign {
+					left: Box::new(ASTNode::Ident("a".to_string())),
+					right: Box::new(
+						ASTNode::BinOp(
+							BinOp {
+								left: Box::new(
+									ASTNode::BinOp(
+										BinOp {
+											left: Box::new(ASTNode::LiteralInt(1)),
+											op: Op::Plus,
+											right: Box::new(ASTNode::LiteralInt(2)),
+										}
+									)
+								),
+								op: Op::Multiply,
+								right: Box::new(ASTNode::LiteralInt(3)),
+							}
+						)
+					)
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
 	}
 
 	#[test]
@@ -1414,7 +923,32 @@ mod tests {
 		let ast = Parser::new(code)
 			.parse();
 
-		println!("ast: {:?}", ast);
+		let expected = vec![
+			ASTNode::Assign(
+				Assign {
+					left: Box::new(ASTNode::Ident("a".to_string())),
+					right: Box::new(
+						ASTNode::BinOp(
+							BinOp {
+								left: Box::new(ASTNode::LiteralInt(1)),
+								op: Op::Plus,
+								right: Box::new(
+									ASTNode::BinOp(
+										BinOp {
+											left: Box::new(ASTNode::LiteralInt(2)),
+											op: Op::Multiply,
+											right: Box::new(ASTNode::LiteralInt(3)),
+										}
+									)
+								),
+							}
+						)
+					)
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
 	}
 
 	#[test]
@@ -1426,7 +960,23 @@ mod tests {
 		let ast = Parser::new(code)
 			.parse();
 
-		println!("ast: {:?}", ast);
+		let expected = vec![
+			ASTNode::Assign(
+				Assign {
+					left: Box::new(ASTNode::Ident("a".to_string())),
+					right: Box::new(
+						ASTNode::Call(
+							Call {
+								callee: Box::new(ASTNode::Ident("foo".to_string())),
+								args: vec![],
+							}
+						)
+					)
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
 	}
 
 	#[test]
@@ -1438,7 +988,25 @@ mod tests {
 		let ast = Parser::new(code)
 			.parse();
 
-		println!("ast: {:?}", ast);
+		let expeted = vec![
+			ASTNode::Assign(
+				Assign {
+					left: Box::new(ASTNode::Ident("a".to_string())),
+					right: Box::new(
+						ASTNode::Call(
+							Call {
+								callee: Box::new(ASTNode::Ident("foo".to_string())),
+								args: vec![
+									ASTNode::LiteralInt(1),
+								],
+							}
+						)
+					)
+				}
+			)
+		];
+
+		assert_eq!(ast, expeted);
 	}
 
 	#[test]
@@ -1448,7 +1016,6 @@ mod tests {
 		"#;
 
 		let ast = Parser::new(code)
-			.set_loglevel(1)
 			.parse();
 
 		let expected = vec![
@@ -1592,7 +1159,6 @@ mod tests {
 		"#;
 
 		let ast = Parser::new(code)
-			.set_loglevel(1)
 			.parse();
 
 		let expected = vec![
@@ -1698,7 +1264,6 @@ mod tests {
 		"#;
 
 		let ast = Parser::new(code)
-			.set_loglevel(1)
 			.parse();
 
 		let expected = vec![
@@ -1724,271 +1289,54 @@ mod tests {
 
 		assert_eq!(ast, expected);
 	}
+
+	#[test]
+	fn test_return_expr() {
+		let code = r#"
+			return 1 + 5
+		"#;
+
+		let ast = Parser::new(code)
+			.parse();
+
+		let expected = vec![
+			ASTNode::Ret(
+				Ret {
+					value: Box::new(
+						Some(
+							ASTNode::BinOp(
+								BinOp {
+									op: Op::Plus,
+									left: Box::new(ASTNode::LiteralInt(1)),
+									right: Box::new(ASTNode::LiteralInt(5)),
+								}
+							)
+						)
+					),
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
+	}
+
+	#[test]
+	fn test_empty_return() {
+		let code = r#"
+			return
+		"#;
+
+		let ast = Parser::new(code)
+			.parse();
+
+		let expected = vec![
+			ASTNode::Ret(
+				Ret {
+					value: Box::new(None),
+				}
+			)
+		];
+
+		assert_eq!(ast, expected);
+	}
 }
-
-
-
-
-
-	// fn parse_body(&mut self, tokens: &mut Vec<Token>) -> Vec<ASTNode> {
-	// 	println!("parse body");
-	
-	// 	let mut nodes = Vec::new();
-	
-	// 	while let Some(token) = tokens.last() {
-	// 		match token {
-	// 			Token::CloseBrace => {
-	// 				println!("brace closed stop parsing body");
-	
-	// 				tokens.pop();
-	// 				break;
-	// 			},
-	// 			_ => {
-	// 				println!("parse body node");
-	
-	// 				match self.parse_body_node(tokens) {
-	// 					Some(n) => nodes.push(n),
-	// 					None => break,
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	
-	// 	println!("parsing body done");
-	
-	// 	nodes
-	// }
-
-	// fn parse_body_node(&mut self, tokens: &mut Vec<Token>) -> Option<ASTNode> {
-	// 	println!("parse_body_node");
-	
-	// 	let next = tokens.pop().unwrap();
-	
-	// 	match next {
-	// 		Token::Ident(ident) => {
-	// 			println!("ident: {}", ident);
-	
-	// 			let next = match tokens.pop() {
-	// 				Some(n) => n,
-	// 				None => {
-	// 					return Some(ASTNode::Ident(ident.to_string()));
-	// 				}
-	// 			};
-	
-	// 			match next {
-	// 				Token::Ident(var_name) => {
-	// 					println!("var name: {}", var_name);
-	
-	// 					let var = Var {
-	// 						name: var_name,
-	// 						typ: ident,
-	// 					};
-	// 					let next = tokens.last().unwrap();
-	
-	// 					match next {
-	// 						Token::Assign => {
-	// 							tokens.pop();
-	// 							Some(ASTNode::Assign(Assign {
-	// 								left: Box::new(ASTNode::Var(var)),
-	// 								right: Box::new(parse_node(tokens).unwrap()),
-	// 							}))
-	// 						},
-	// 						_ => None
-	// 					}
-	// 				},
-	// 				Token::OpenBrace => {
-	// 					let props: Vec<Property> = parse_obj_probs(tokens);
-			
-	// 					Some(ASTNode::StructIns(
-	// 						StructIns {
-	// 							name: ident.to_string(),
-	// 							properties: props,
-	// 						}
-	// 					))
-	// 				},
-	// 				Token::Assign => {
-	// 					println!("assign");
-	
-	// 					Some(ASTNode::Assign(Assign {
-	// 						left: Box::new(ASTNode::Ident(ident.to_string())),
-	// 						right: Box::new(parse_node(tokens).unwrap()),
-	// 					}))
-	// 				},
-	// 				Token::OpenParen => {
-	// 					let mut call = Call {
-	// 						callee: Box::new(ASTNode::Ident(ident.to_string())),
-	// 						arguments: Vec::new(),
-	// 					};
-			
-	// 					while let Some(next) = tokens.last() {
-	// 						match next {
-	// 							Token::CloseParen => {
-	// 								tokens.pop();
-	// 								break;
-	// 							},
-	// 							Token::Comma => {
-	// 								tokens.pop();
-	// 							},
-	// 							_ => {
-	// 								call.arguments.push(parse_node(tokens).unwrap());
-	// 							}
-	// 						}
-	// 					};
-			
-	// 					Some(ASTNode::Call(call))
-	// 				},
-	// 				Token::Dot => {
-	// 					Some(ASTNode::ProbAccess(ProbAccess {
-	// 						object: Box::new(ASTNode::Ident(ident.to_string())),
-	// 						property: Box::new(parse_node(tokens).unwrap()),
-	// 					}))
-	// 				},
-	// 				_ => {
-	// 					todo!("Unexpected token: {:?}", next);
-	// 				}
-	// 			}
-	// 		},
-	// 		Token::Type => {
-	// 			println!("type");
-	
-	// 			let ident = expect_identifier(tokens);
-	
-	// 			expect_token(tokens, Token::OpenBrace);
-	
-	// 			let mut type_def = TypeDef {
-	// 				name: ident,
-	// 				fields: Vec::new(),
-	// 			};
-				
-	// 			while let Some(token) = tokens.pop() {
-	// 				match token {
-	// 					Token::CloseBrace => {
-	// 						break;
-	// 					},
-	// 					Token::Ident(ident) => {
-	// 						println!("Identifier: {}", ident);
-	
-	// 						expect_token(tokens, Token::Colon);
-	
-	// 						let typ = match tokens.pop().unwrap() {
-	// 							Token::IntDef => VarType::Int,
-	// 							Token::FloatDef => VarType::Float,
-	// 							Token::StringDef => VarType::String,
-	// 							Token::Ident(ident) => VarType::Var(ident),
-	// 							Token::String(str) => VarType::StrLit(str),
-	// 							Token::OpenParen => VarType::FnDef(parse_func_def(tokens)),
-	// 							_ => {
-	// 								todo!();
-	// 							}
-	// 						};
-	
-	// 						let field = TypeField {
-	// 							name: ident,
-	// 							typ: typ,
-	// 						};
-	
-	// 						type_def.fields.push(field);
-	// 					},
-	// 					_ => {
-	// 						todo!();
-	// 					}
-	// 				}
-	// 			}
-	
-	// 			Some(ASTNode::TypeDef(type_def))
-	// 		},
-	// 		Token::Return => {
-	// 			let node = parse_node(tokens).unwrap();
-	
-	// 			Some(ASTNode::Ret(Box::new(node)))
-	// 		},
-	// 		Token::Struct => Some(ASTNode::StructDef(parse_struct(tokens))),
-	// 		_ => {
-	// 			todo!("Unexpected token: {:?}", next);
-	// 		}
-	// 	}
-	// }
-
-	// fn parse_node(&mut self, tokens: &mut Vec<Token>) -> Option<ASTNode> {
-	// 	let next = tokens.last().unwrap().clone();
-	
-	// 	println!("parse_node {:?}", next);
-	
-	// 	match next {
-	// 		Token::Ident(ident) => {
-	// 			tokens.pop();
-	// 			println!("node is identifier: {:?}", ident);
-	// 			parse_ident(tokens, &ident)
-	// 		},
-	// 		Token::String(str) => {
-	// 			tokens.pop();
-	// 			println!("LiteralString: {:?}", str);
-	// 			Some(ASTNode::LiteralString(str.to_string()))
-	// 		},
-	// 		Token::Int(i) => {
-	// 			tokens.pop();
-	// 			println!("LiteralInt: {:?}", i);
-	// 			Some(ASTNode::LiteralInt(i))
-	// 		},
-	// 		Token::Decimal(d) => {
-	// 			tokens.pop();
-	// 			Some(ASTNode::LiteralDecimal(d))
-	// 		},
-	// 		Token::CloseBrace => {
-	// 			None
-	// 		},
-	// 		Token::OpenBracket => {
-	// 			println!("parse array");
-	// 			tokens.pop();
-	
-	// 			let mut items = Vec::new();
-	
-	// 			while let Some(token) = tokens.last() {
-	// 				match token {
-	// 					Token::CloseBracket => {
-	// 						println!("CloseBracket");
-	
-	// 						tokens.pop();
-	// 						break;
-	// 					},
-	// 					Token::Comma => {
-	// 						println!("Comma");
-	
-	// 						tokens.pop();
-	// 					},
-	// 					_ => {
-	// 						println!("parse array item");
-	// 						let node = parse_node(tokens).unwrap();
-	// 						items.push(node);
-	// 					}
-	// 				}
-	// 			}
-	
-	// 			let array = Array {
-	// 				items: items,
-	// 			};
-	
-	// 			println!("parse array done");
-	
-	// 			Some(ASTNode::Array(array))
-	// 		},
-	// 		Token::OpenParen => {
-	// 			tokens.pop();
-	// 			Some(ASTNode::FnDef(parse_func_def(tokens)))
-	// 		},
-	// 		Token::Struct => {
-	// 			tokens.pop();
-	// 			Some(ASTNode::StructDef(parse_struct(tokens)))
-	// 		},
-	// 		Token::CloseParen => None,
-	// 		Token::OpenBrace => {
-	// 			tokens.pop();
-	// 			Some(ASTNode::Obj(Obj{
-	// 				properties: parse_obj_probs(tokens),
-	// 			}))
-	// 		},
-	// 		_ => {
-	// 			todo!("Unexpected token: {:?}", next);
-	// 		}
-	// 	}
-	// }
