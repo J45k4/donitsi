@@ -18,7 +18,7 @@ struct StructDef {
     fields: Vec<StructField>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum ByteCode {
     Load(usize),
     Store,
@@ -27,9 +27,7 @@ pub enum ByteCode {
     LoadStruct(usize),
     StoreField(usize),
     InstanceStruct(usize),
-    LoadStrLit(usize),
-    LoadIntLit(usize),
-    LoadDecLit(f64),
+    LoadConst(usize),
     MakeArray(usize),
     MakeFn(usize),
     Call(usize),
@@ -216,19 +214,24 @@ impl Vm {
 
                     // self.scope.insert(*id, struct_def);
                 }
-                ByteCode::LoadStrLit(id) => {
-                    let s: String = self.id_to_str.get(id).unwrap().clone();
-                    self.stack.push(Value::String(s));
-                }
-                ByteCode::LoadIntLit(id) => {
-                    let i: i64 = *id as i64;
-                    self.stack.push(Value::Int(i));
-                }
-                ByteCode::LoadDecLit(id) => {
-                    // let struct_def = self.scope.get(id).unwrap().clone();
+                ByteCode::LoadConst(id) => {
+                    let val = self.consts.get(id).unwrap().clone();
 
-                    // self.scope.insert(*id, struct_def);
+                    self.stack.push(val);
                 }
+                // ByteCode::LoadStrLit(id) => {
+                //     let s: String = self.id_to_str.get(id).unwrap().clone();
+                //     self.stack.push(Value::Str(s));
+                // }
+                // ByteCode::LoadIntLit(id) => {
+                //     let i: i64 = *id as i64;
+                //     self.stack.push(Value::Int(i));
+                // }
+                // ByteCode::LoadDecLit(id) => {
+                //     // let struct_def = self.scope.get(id).unwrap().clone();
+
+                //     // self.scope.insert(*id, struct_def);
+                // }
                 ByteCode::MakeArray(id) => {
                     // let struct_def = self.scope.get(id).unwrap().clone();
 

@@ -53,15 +53,15 @@ pub fn ast_pretty_string(node: &ASTNode) -> String {
         ASTNode::Ident(ident) => {
             s += ident
         },
-        ASTNode::Str(lit) => {
-            s += &format!(r#""{}""#, lit);
-        },
-        ASTNode::Int(lit) => {
-            s += &lit.to_string()
-        },
-        ASTNode::Float(lit) => {
-            s += format!("LiteralDecimal: {}\n", lit).as_str();
-        },
+        // ASTNode::Lit(lit) => {
+        //     s += &format!(r#""{}""#, lit);
+        // },
+        // ASTNode::Int(lit) => {
+        //     s += &lit.to_string()
+        // },
+        // ASTNode::Float(lit) => {
+        //     s += format!("LiteralDecimal: {}\n", lit).as_str();
+        // },
         ASTNode::LiteralPercent(lit) => {
             s += format!("LiteralPercent: {}\n", lit).as_str();
         },

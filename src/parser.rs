@@ -1,5 +1,7 @@
 use logos::{Logos, skip, Span};
 
+use crate::types::Value;
+
 #[derive(Logos, Debug, PartialEq, Clone)]
 enum Token {
 	#[token(" ", skip)]
@@ -40,7 +42,7 @@ enum Token {
 	#[regex(r"-?[0-9]+", |t| t.slice().parse::<i64>())]
 	Int(i64),
 	#[regex(r"-?[0-9]*\.[0-9]+", |t| t.slice().parse::<f64>())]
-	Decimal(f64),
+	Float(f64),
 	#[token("struct")]
 	Struct,
 	#[token("Int")]
@@ -176,9 +178,7 @@ pub enum ASTNode {
 	Array(Array),
 	Call(Call),
 	Property(String, Box<ASTNode>),
-	Str(String),
-	Int(i64),
-	Float(f64),
+	Lit(Value),
 	LiteralPercent(f64),
 	Fun(Fun),
 	StructDef(StructDef),
@@ -814,9 +814,9 @@ impl Parser {
 
 				ASTNode::Ident(ident.to_string())
 			}
-			Token::String(s) => ASTNode::Str(s),
-			Token::Int(num) => ASTNode::Int(num),
-			Token::Decimal(num) => ASTNode::Float(num),
+			Token::String(s) => ASTNode::Lit(Value::Str(s)),
+			Token::Int(num) => ASTNode::Lit(Value::Int(num)),
+			Token::Float(num) => ASTNode::Lit(Value::Float(num)),
 			Token::OpenParen => {
 				let node = self.parse_expr();
 				
@@ -857,9 +857,9 @@ mod tests {
 					right: Box::new(
 						ASTNode::BinOp(
 							BinOp {
-								left: Box::new(ASTNode::Int(1)),
+								left: Box::new(ASTNode::Lit(Value::Int(1))),
 								op: Op::Plus,
-								right: Box::new(ASTNode::Int(2)),
+								right: Box::new(ASTNode::Lit(Value::Int(2))),
 							}
 						)
 					)
@@ -886,9 +886,9 @@ mod tests {
 					right: Box::new(
 						ASTNode::BinOp(
 							BinOp {
-								left: Box::new(ASTNode::Int(1)),
+								left: Box::new(ASTNode::Lit(Value::Int(1))),
 								op: Op::Minus,
-								right: Box::new(ASTNode::Int(2)),
+								right: Box::new(ASTNode::Lit(Value::Int(2))),
 							}
 						)
 					)
@@ -915,9 +915,9 @@ mod tests {
 					right: Box::new(
 						ASTNode::BinOp(
 							BinOp {
-								left: Box::new(ASTNode::Int(1)),
+								left: Box::new(ASTNode::Lit(Value::Int(1))),
 								op: Op::Multiply,
-								right: Box::new(ASTNode::Int(2)),
+								right: Box::new(ASTNode::Lit(Value::Int(2))),
 							}
 						)
 					)
@@ -944,9 +944,9 @@ mod tests {
 					right: Box::new(
 						ASTNode::BinOp(
 							BinOp {
-								left: Box::new(ASTNode::Int(1)),
+								left: Box::new(ASTNode::Lit(Value::Int(1))),
 								op: Op::Divide,
-								right: Box::new(ASTNode::Int(2)),
+								right: Box::new(ASTNode::Lit(Value::Int(2))),
 							}
 						)
 					)
@@ -976,14 +976,14 @@ mod tests {
 								left: Box::new(
 									ASTNode::BinOp(
 										BinOp {
-											left: Box::new(ASTNode::Int(1)),
+											left: Box::new(ASTNode::Lit(Value::Int(1))),
 											op: Op::Plus,
-											right: Box::new(ASTNode::Int(2)),
+											right: Box::new(ASTNode::Lit(Value::Int(2))),
 										}
 									)
 								),
 								op: Op::Multiply,
-								right: Box::new(ASTNode::Int(3)),
+								right: Box::new(ASTNode::Lit(Value::Int(3))),
 							}
 						)
 					)
@@ -1010,14 +1010,14 @@ mod tests {
 					right: Box::new(
 						ASTNode::BinOp(
 							BinOp {
-								left: Box::new(ASTNode::Int(1)),
+								left: Box::new(ASTNode::Lit(Value::Int(1))),
 								op: Op::Plus,
 								right: Box::new(
 									ASTNode::BinOp(
 										BinOp {
-											left: Box::new(ASTNode::Int(2)),
+											left: Box::new(ASTNode::Lit(Value::Int(2))),
 											op: Op::Multiply,
-											right: Box::new(ASTNode::Int(3)),
+											right: Box::new(ASTNode::Lit(Value::Int(3))),
 										}
 									)
 								),
@@ -1077,7 +1077,7 @@ mod tests {
 							Call {
 								callee: Box::new(ASTNode::Ident("foo".to_string())),
 								args: vec![
-									ASTNode::Int(1),
+									ASTNode::Lit(Value::Int(1)),
 								],
 							}
 						)
@@ -1110,13 +1110,13 @@ mod tests {
 										Call {
 											callee: Box::new(ASTNode::Ident("foo".to_string())),
 											args: vec![
-												ASTNode::Int(1),
+												ASTNode::Lit(Value::Int(1)),
 											],
 										}
 									)
 								),
 								args: vec![
-									ASTNode::Int(2),
+									ASTNode::Lit(Value::Int(2)),
 								],
 							}
 
@@ -1171,7 +1171,7 @@ mod tests {
 						)
 					),
 					args: vec![
-						ASTNode::Int(1),
+						ASTNode::Lit(Value::Int(1)),
 					],
 				}
 			)
@@ -1198,7 +1198,7 @@ mod tests {
 							Fun {
 								params: vec![],
 								body: vec![
-									ASTNode::Int(5),
+									ASTNode::Lit(Value::Int(5)),
 								],
 							}
 						),
@@ -1254,9 +1254,9 @@ mod tests {
 						ASTNode::Array(
 							Array {
 								items: vec![
-									ASTNode::Int(1),
-									ASTNode::Int(2),
-									ASTNode::Int(3),
+									ASTNode::Lit(Value::Int(1)),
+									ASTNode::Lit(Value::Int(2)),
+									ASTNode::Lit(Value::Int(3)),
 								],
 							}
 						)
@@ -1309,15 +1309,15 @@ mod tests {
 					probs: vec![
 						Property {
 							name: "x".to_string(),
-							value: Box::new(ASTNode::Int(1)),
+							value: Box::new(ASTNode::Lit(Value::Int(1))),
 						},
 						Property {
 							name: "y".to_string(),
-							value: Box::new(ASTNode::Int(2)),
+							value: Box::new(ASTNode::Lit(Value::Int(2))),
 						},
 						Property {
 							name: "name".to_string(),
-							value: Box::new(ASTNode::Str("nakki".to_string())),
+							value: Box::new(ASTNode::Lit(Value::Str("nakki".to_string()))),
 						},
 					],
 				}
@@ -1457,7 +1457,7 @@ mod tests {
 										BinOp {
 											op: Op::Plus,
 											left: Box::new(ASTNode::Ident("a".to_string())),
-											right: Box::new(ASTNode::Int(1)),
+											right: Box::new(ASTNode::Lit(Value::Int(1))),
 										}
 									)
 								],
@@ -1495,7 +1495,7 @@ mod tests {
 										BinOp {
 											op: Op::Plus,
 											left: Box::new(ASTNode::Ident("a".to_string())),
-											right: Box::new(ASTNode::Int(1)),
+											right: Box::new(ASTNode::Lit(Value::Int(1))),
 										}
 									)
 								],
@@ -1526,8 +1526,8 @@ mod tests {
 							ASTNode::BinOp(
 								BinOp {
 									op: Op::Plus,
-									left: Box::new(ASTNode::Int(1)),
-									right: Box::new(ASTNode::Int(5)),
+									left: Box::new(ASTNode::Lit(Value::Int(1))),
+									right: Box::new(ASTNode::Lit(Value::Int(5))),
 								}
 							)
 						)
@@ -1604,15 +1604,15 @@ mod tests {
 					probs: vec![
 						Property {
 							name: "x".to_string(),
-							value: Box::new(ASTNode::Float(-0.6)),
+							value: Box::new(ASTNode::Lit(Value::Float(-0.6))),
 						},
 						Property {
 							name: "y".to_string(),
-							value: Box::new(ASTNode::Float(0.1)),
+							value: Box::new(ASTNode::Lit(Value::Float(0.1))),
 						},
 						Property {
 							name: "color".to_string(),
-							value: Box::new(ASTNode::Str("black".to_string())),
+							value: Box::new(ASTNode::Lit(Value::Str("black".to_string()))),
 						},
 					],
 				}

@@ -1,8 +1,8 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Int(i64),
-    Float(f32),
-    String(String),
+    Float(f64),
+    Str(String),
     Bool(bool),
     Array(Vec<Value>),
     None,
@@ -28,7 +28,7 @@ pub enum Action {
     Quit
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Const {
     pub id: usize,
     pub value: Value,
