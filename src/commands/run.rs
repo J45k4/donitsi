@@ -15,7 +15,6 @@ pub fn run(args: RunArgs, log: usize) {
 
     let path = Path::new(&args.path);
 
-    let mut compiler = Compiler::new();
     let mut vm = Vm::new();
 
     let code = match path.exists() {
@@ -31,14 +30,14 @@ pub fn run(args: RunArgs, log: usize) {
         }
     }
 
-    let res = compiler.compile(&ast);
+    let res = Compiler::new().compile(ast);
 
     println!("consts: {:?}", res.consts);
     println!("bytecode: {}", bytecode_to_str(&res.bytecode));
 
-    for c in res.consts {
-        vm.store_const(c);
-    }
+    // for c in res.consts {
+    //     vm.store_const(c);
+    // }
 
     vm.create_code_block(&res.bytecode);
 

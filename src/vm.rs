@@ -31,6 +31,10 @@ pub enum ByteCode {
     MakeArray(usize),
     MakeFn(usize),
     Call(usize),
+    Add,
+    Sub,
+    Mul,
+    Div,
 }
 
 #[derive(Debug)]
@@ -246,6 +250,9 @@ impl Vm {
                     // let struct_def = self.scope.get(id).unwrap().clone();
 
                     // self.scope.insert(*id, struct_def);
+                }
+                _ => {
+                    todo!("unhandled bytecode: {:?}", bc);
                 }
             }
         }

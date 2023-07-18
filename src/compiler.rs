@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use crate::parser::ASTNode;
+use crate::parser::Op;
 use crate::types::Const;
 use crate::types::Value;
 use crate::vm::ByteCode;
@@ -12,9 +12,11 @@ pub struct CompileRes {
     pub consts: Vec<Const>,
 }
 
+#[derive(Debug, Clone)]
 pub struct Compiler {
     pub consts: Vec<Value>,
-    pub idents: HashMap<String, usize>
+    pub idents: HashMap<String, usize>,
+    pub bytecode: Vec<ByteCode>,
 }
 
 impl Compiler {
@@ -22,6 +24,7 @@ impl Compiler {
         Compiler{
             consts: Vec::new(),
             idents: HashMap::new(),
+            bytecode: Vec::new(),
         }
     }
 
@@ -46,75 +49,71 @@ impl Compiler {
         }
     }
 
-    // fn get_str(&mut self, ident: &str) -> usize {
-    //     match self.str_to_id.get(ident) {
-    //         Some(id) => *id,
-    //         None => {
-    //             let id = self.str_to_id.len();
-
-    //             self.str_to_id.insert(ident.to_string(), id);
-    //             // self.id_to_str.insert(id, ident.to_string());
-
-    //             id
-    //         }
-    //     }
-    // }
-
-    fn compile_node(&mut self, res: &mut CompileRes, node: &ASTNode) {
+    fn compile_node(&mut self, node: &ASTNode) {
         match node {
-            ASTNode::Ident(ident) => res.bytecode.push(ByteCode::Load(self.store_ident(ident))),
+            ASTNode::Ident(ident) => {
+                let id = self.store_ident(&ident);
+                self.bytecode.push(ByteCode::Load(id));
+            },
             ASTNode::Assign(asg) => {
-                self.compile_node(res, &asg.left);
-                self.compile_node(res, &asg.right);
-                res.bytecode.push(ByteCode::Store);
+                self.compile_node(&asg.left);
+                self.compile_node(&asg.right);
+                self.bytecode.push(ByteCode::Store);
             },
             ASTNode::StructIns(obj) => {
 
                 for field in &obj.probs {
-                    self.compile_node(res, &field.value);
-                    res.bytecode.push(ByteCode::StoreField(self.store_ident(&field.name)));
+                    self.compile_node(&field.value);
+                    let id = self.store_ident(&field.name);
+                    self.bytecode.push(ByteCode::StoreField(id));
                 }
 
-                res.bytecode.push(ByteCode::Load(self.store_ident(&obj.name)));
+                let id = self.store_ident(&obj.name);
+                self.bytecode.push(ByteCode::Load(id));
             },
             ASTNode::ForLoop(_) => todo!(),
             ASTNode::Array(a) => {
                 for item in &a.items {
-                    self.compile_node(res, item);
+                    self.compile_node(&item);
                 }
 
-                res.bytecode.push(ByteCode::MakeArray(a.items.len()));
+                self.bytecode.push(ByteCode::MakeArray(a.items.len()));
             },
             ASTNode::Call(call) => {
-                self.compile_node(res, &call.callee);
+                self.compile_node(&call.callee);
                 for a in &call.args {
-                    self.compile_node(res, a);
+                    self.compile_node(&a);
                 }                
-                res.bytecode.push(ByteCode::Call(call.args.len()))
+                self.bytecode.push(ByteCode::Call(call.args.len()))
 
             },
             ASTNode::TypeDef(_) => { /* We are going to ignore types in compiler for now */},
             ASTNode::Property(_, _) => todo!(),
             ASTNode::StructIns(obj) => todo!(),
-            ASTNode::Lit(lit) => res.bytecode.push(ByteCode::LoadConst(self.store_const(lit.clone()))),
+            ASTNode::Lit(lit) => {
+                let id = self.store_const(lit.clone());
+                self.bytecode.push(ByteCode::LoadConst(id))
+            },
             ASTNode::LiteralPercent(_) => todo!(),
             ASTNode::Fun(def) => {
                 for p in &def.params {
-                    self.compile_node(res, p);
+                    self.compile_node(&p);
                 }
 
                 for item in &def.body {
-                    self.compile_node(res, item);
+                    self.compile_node(&item);
                 }
 
-                res.bytecode.push(ByteCode::MakeFn(def.params.len()));
+                self.bytecode.push(ByteCode::MakeFn(def.params.len()));
             },
             ASTNode::StructDef(def) => {
                 for field in &def.fields {
-                    res.bytecode.push(ByteCode::AddField(self.store_ident(&field.name)));
+                    let id = self.store_ident(&field.name);
+                    self.bytecode.push(ByteCode::AddField(id));
                 }
 
-                res.bytecode.push(ByteCode::CreateStruct(self.store_ident(&def.name)));
+                let id = self.store_ident(&def.name);
+                self.bytecode.push(ByteCode::CreateStruct(id));
             },
             ASTNode::Var(def) => {
 
@@ -127,36 +126,41 @@ impl Compiler {
                 // self.compile_node(bytecode, &ret.value);
                 // bytecode.push(ByteCode::Return);
             },
-            ASTNode::BinOp(_) => todo!(),
+            ASTNode::BinOp(bin_op) => {
+                self.compile_node(&bin_op.left);
+                self.compile_node(&bin_op.right);
+
+                match bin_op.op {
+                    Op::Plus => self.bytecode.push(ByteCode::Add),
+                    Op::Minus => self.bytecode.push(ByteCode::Sub),
+                    Op::Multiply => self.bytecode.push(ByteCode::Mul),
+                    Op::Divide => self.bytecode.push(ByteCode::Div),
+                }
+            },
             
         }
     }
 
-    pub fn compile(&mut self, ast: &[ASTNode]) -> CompileRes {
-        let mut res = CompileRes {
-            bytecode: Vec::new(),
-            consts: Vec::new(),
-        };
-        
-        for node in ast {
-            self.compile_node(&mut res, node);
+    pub fn compile(mut self, ast: Vec<ASTNode>) -> Self {
+        for node in &ast {
+            self.compile_node(node);
         }
 
-        res
+        self
     }
 }
 
 
 #[cfg(test)]
 mod tests {
+    use crate::parser::BinOp;
+    use crate::parser::Op;
     use crate::types::Value;
 
     use super::*;
 
     #[test]
     fn test_assign_num_lit() {
-        let mut compiler = super::Compiler::new();
-
         let ast = vec![
             crate::parser::ASTNode::Assign(crate::parser::Assign{
                 left: Box::new(crate::parser::ASTNode::Ident("x".to_string())),
@@ -164,12 +168,10 @@ mod tests {
             })
         ];
 
-        let res = compiler.compile(&ast);
+        let compiler = Compiler::new().compile(ast);
 
-        println!("{:?}", res);
-
-        assert_eq!(res.consts, vec![]);
-        assert_eq!(res.bytecode, vec![
+        assert_eq!(compiler.consts, vec![Value::Int(10)]);
+        assert_eq!(compiler.bytecode, vec![
             ByteCode::Load(0),
             ByteCode::LoadConst(0),
             ByteCode::Store,
@@ -178,8 +180,6 @@ mod tests {
 
     #[test]
     fn test_assign_str_lit() {
-        let mut compiler = super::Compiler::new();
-
         let ast = vec![
             crate::parser::ASTNode::Assign(crate::parser::Assign{
                 left: Box::new(crate::parser::ASTNode::Ident("x".to_string())),
@@ -187,20 +187,73 @@ mod tests {
             })
         ];
 
-        let res = compiler.compile(&ast);
+        let compiler = Compiler::new().compile(ast);
 
-        println!("{:?}", res);
+        println!("{:?}", compiler);
 
-        assert_eq!(res.consts, vec![
-            Const {
-                id: 1,
-                value: Value::Str("Hello".to_string())
-            }
+        assert_eq!(compiler.consts, vec![
+            Value::Str("Hello".to_string())
         ]);
-        assert_eq!(res.bytecode, vec![
+        assert_eq!(compiler.bytecode, vec![
             ByteCode::Load(0),
             ByteCode::LoadConst(0),
             ByteCode::Store,
         ]);
     }
+
+    #[test]
+    fn test_simple_binop() {
+        let ast = vec![
+            ASTNode::BinOp(BinOp{
+                left: Box::new(ASTNode::Lit(Value::Int(10))),
+                right: Box::new(ASTNode::Lit(Value::Int(20))),
+                op: Op::Plus,
+            })
+        ];
+
+        let compiler = Compiler::new().compile(ast);
+
+        assert_eq!(compiler.consts, vec![
+            Value::Int(10),
+            Value::Int(20),
+        ]);
+        assert_eq!(compiler.bytecode, vec![
+            ByteCode::LoadConst(0),
+            ByteCode::LoadConst(1),
+            ByteCode::Add,
+        ]);
+    }
+
+    #[test]
+    fn test_more_complicated_binop() {
+        let ast = vec![
+            ASTNode::BinOp(BinOp{
+                left: Box::new(ASTNode::BinOp(BinOp{
+                    left: Box::new(ASTNode::Lit(Value::Int(10))),
+                    right: Box::new(ASTNode::Lit(Value::Int(20))),
+                    op: Op::Plus,
+                })),
+                right: Box::new(ASTNode::Lit(Value::Int(30))),
+                op: Op::Plus,
+            })
+        ];
+
+        let compiler = Compiler::new().compile(ast);
+
+        assert_eq!(compiler.consts, vec![
+            Value::Int(10),
+            Value::Int(20),
+            Value::Int(30),
+        ]);
+        assert_eq!(compiler.bytecode, vec![
+            ByteCode::LoadConst(0),
+            ByteCode::LoadConst(1),
+            ByteCode::Add,
+            ByteCode::LoadConst(2),
+            ByteCode::Add,
+        ]);
+    }
+
+    // #[test]
+    // fn 
 }
