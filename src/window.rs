@@ -109,6 +109,10 @@ impl Window {
         }
     }
 
+    pub fn id(&self) -> winit::window::WindowId {
+        self.window_handle.id()
+    }
+
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
         let view = output

@@ -31,13 +31,9 @@ impl Donitsi {
         }
     }
 
-    async fn create_window(&self, title: &str) -> Window {
-        let event_loop = EventLoop::new();
-        let window = WindowBuilder::new()
-            .with_title(title)
-            .build(&event_loop).unwrap();
-
-        Window::new(&event_loop, &self.instance).await
+    pub async fn create_window(&mut self, title: &str) {
+        let window = Window::new(&self.event_loop, &self.instance).await;
+        self.windows.insert(window.id(), window);
     }
 
     pub fn run(mut self) {

@@ -1,20 +1,16 @@
 use crate::args::Args;
 use crate::args::Commands;
 use clap::Parser;
+use donitsi::Donitsi;
+use winit::event_loop::EventLoop;
+use winit::window::WindowBuilder;
 
 mod parser;
-mod parser_tests;
 mod args;
 mod commands;
 mod window;
-mod component;
-mod vm;
 mod types;
-mod ui;
-mod pretty;
 mod donitsi;
-mod components;
-mod compiler;
 
 #[tokio::main]
 async fn main() {
@@ -24,15 +20,15 @@ async fn main() {
 
     let args: Args = Args::parse();
 
-    match args.command {
-        Commands::Run(run_args) => {
-            commands::run(run_args, args.log);
-        },
-        Commands::Ast(ast_args) => {
-            commands::ast(ast_args);
-        },
-        Commands::Donitsi => {
-            commands::donitsi().await;
-        }
-    }
+    // let mut donitsi = Donitsi::new();
+    // donitsi.create_window("Donitsi").await;
+    // donitsi.run();
+
+    let event_loop = EventLoop::new();
+    let window_handle = WindowBuilder::new().build(&event_loop).unwrap();
+    let size = window_handle.inner_size();
+
+    event_loop.run(move |event, _, control_flow| {
+
+    })
 }
